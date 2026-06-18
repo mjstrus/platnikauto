@@ -47,44 +47,15 @@ for key, default in [
 # ============================================================
 #  SIDEBAR
 # ============================================================
-KODY_TYTULU = [
-    "0110 — Pracownik (umowa o pracę)",
-    "0111 — Pracownik młodociany",
-    "0120 — Osoba odbywająca służbę zastępczą",
-    "0125 — Praktykant absolwent",
-    "0126 — Pracownik tymczasowy",
-    "0411 — Zleceniobiorca (pełne ubezp.)",
-    "0417 — Zleceniobiorca (tylko zdrowotne)",
-    "0426 — Niania (umowa uaktywniająca)",
-    "0428 — Członek rady nadzorczej (zlecenie)",
-    "0510 — Osoba prowadząca działalność gosp.",
-    "0511 — Osoba współpracująca z prowadzącym działalność",
-    "0540 — Działalność — preferencyjne składki",
-    "0570 — Działalność — ulga na start",
-    "0580 — Działalność — Mały ZUS",
-    "0590 — Działalność — Mały ZUS Plus",
-    "0592 — Mały ZUS Plus z prawem do renty",
-    "0514 — Działalność — wakacje składkowe",
-    "0610 — Poseł lub senator",
-    "0700 — Stypendysta sportowy",
-    "0800 — Duchowny",
-    "0811 — Duchowny (bez prawa do emerytury)",
-    "0860 — Pomocnik rolnika",
-    "0920 — Osoba na stażu/szkoleniu z PUP",
-    "0921 — Niepełnosprawny z PUP na szkoleniu/stażu",
-    "1110 — Żołnierz niezawodowy (służba)",
-    "1211 — Urlop wychowawczy",
-    "1240 — Osoba pobierająca zasiłek macierzyński",
-    "1812 — Student odbywający staż adaptacyjny",
-    "1813 — Student/doktorant",
-    "1910 — Rolnik/domownik KRUS",
-    "2000 — Emeryt lub rencista",
-    "2110 — Pobierający świadczenie pielęgnacyjne",
-    "2241 — Członek rady nadzorczej",
-    "2400 — Marynarz (od 2026)",
-    "2500 — Niania (umowa uaktywniająca, budżet)",
-    "3000 — Osoba objęta ubezp. zdrowotnym (inna)",
-]
+KODY_TYTULU_REF = {
+    "01xx": "PRACOWNICY: 0110-pracownik, 0111-młodociany, 0112-świadcz.szkol., 0120-służba zastępcza, 0125-praktykant, 0126-tymczasowy",
+    "04xx": "ZLECENIOBIORCY: 0411-zlecenie pełne, 0417-tylko zdrowotne, 0426-niania, 0428-rada nadzorcza, 0429-zlecenie zagr., 0431-niania nadwyżka",
+    "05xx": "DZIAŁALNOŚĆ: 0510-pełne, 0511-współpracujący, 0512-z rentą, 0514-wakacje, 0540-preferencyjne, 0570-ulga na start, 0580-Mały ZUS, 0590-Mały ZUS Plus",
+    "06-09": "INNE: 0610-poseł, 0700-stypendysta, 0800-duchowny, 0860-pomocnik rolnika, 0920-staż PUP, 0921-niepełnospr. PUP",
+    "11-19": "SZCZEGÓLNE: 1110-żołnierz, 1211-urlop wych., 1240-zasiłek macierz., 1813-student, 1910-rolnik KRUS",
+    "20-25": "ŚWIADCZENIA: 2000-emeryt/rencista, 2110-św.pielęgnacyjne, 2241-rada nadzorcza, 2250-powołany/prokurent, 2400-marynarz, 2500-niania budżet",
+    "30xx": "ZDROWOTNE: 3000-inna osoba objęta ubezp. zdrowotnym",
+}
 
 with st.sidebar:
     # --- OPERACJA ---
@@ -107,8 +78,11 @@ with st.sidebar:
 
     if typ_operacji in ("ZUA", "ZZA"):
         data_zgloszenia = st.date_input("Data zgłoszenia", value=date.today())
-        kod_tytulu = st.selectbox("Kod tytułu ubezpieczenia", KODY_TYTULU)
-        kod_tytulu_val = kod_tytulu.split(" — ")[0]
+        kod_tytulu_input = st.text_input("Kod tytułu ubezpieczenia (4 cyfry)", value="0110", max_chars=4, help="Wpisz 4-cyfrowy kod, np. 0110, 0411, 2250")
+        with st.expander("📖 Podpowiedź — popularne kody"):
+            for grupa, opis in KODY_TYTULU_REF.items():
+                st.caption(f"**{grupa}**: {opis}")
+        kod_tytulu_val = kod_tytulu_input.strip().zfill(4)
 
         if typ_operacji == "ZUA":
             st.caption("Ubezpieczenia:")
@@ -123,8 +97,11 @@ with st.sidebar:
 
     elif typ_operacji == "ZWUA":
         data_wyrejestrowania = st.date_input("Data wyrejestrowania", value=date.today())
-        kod_tytulu = st.selectbox("Kod tytułu ubezpieczenia", KODY_TYTULU)
-        kod_tytulu_val = kod_tytulu.split(" — ")[0]
+        kod_tytulu_input = st.text_input("Kod tytułu ubezpieczenia (4 cyfry)", value="0110", max_chars=4, help="Wpisz 4-cyfrowy kod, np. 0110, 0411, 2250")
+        with st.expander("📖 Podpowiedź — popularne kody"):
+            for grupa, opis in KODY_TYTULU_REF.items():
+                st.caption(f"**{grupa}**: {opis}")
+        kod_tytulu_val = kod_tytulu_input.strip().zfill(4)
         kod_wyrejestrowania = st.selectbox("Kod przyczyny wyrejestrowania", [
             "100 — Ustanie tytułu do ubezpieczeń",
             "500 — Zgon ubezpieczonego",
@@ -133,8 +110,11 @@ with st.sidebar:
         kod_wyr_val = kod_wyrejestrowania.split(" — ")[0]
 
     elif typ_operacji == "RCA":
-        kod_tytulu = st.selectbox("Kod tytułu ubezpieczenia", KODY_TYTULU)
-        kod_tytulu_val = kod_tytulu.split(" — ")[0]
+        kod_tytulu_input = st.text_input("Kod tytułu ubezpieczenia (4 cyfry)", value="0110", max_chars=4, help="Wpisz 4-cyfrowy kod, np. 0110, 0411, 2250")
+        with st.expander("📖 Podpowiedź — popularne kody"):
+            for grupa, opis in KODY_TYTULU_REF.items():
+                st.caption(f"**{grupa}**: {opis}")
+        kod_tytulu_val = kod_tytulu_input.strip().zfill(4)
 
     elif typ_operacji == "ZIUA":
         st.info("ZIUA: system automatycznie wykryje pracowników ze zmianą paszport → PESEL")
@@ -258,8 +238,7 @@ if uploaded:
                 "✓": st.column_config.CheckboxColumn("✓", default=True, width="small"),
                 "PESEL": st.column_config.TextColumn("PESEL", width="medium"),
                 "Nr paszportu": st.column_config.TextColumn("Nr paszportu", width="medium"),
-                "Kod tytułu": st.column_config.SelectboxColumn("Kod tytułu",
-                    options=[k.split(" — ")[0] for k in KODY_TYTULU], width="small"),
+                "Kod tytułu": st.column_config.TextColumn("Kod tytułu", width="small"),
                 "NFZ (auto)": st.column_config.SelectboxColumn("NFZ",
                     options=[f"{i:02d}" for i in range(1, 17)], width="small"),
                 "Obywatelstwo": st.column_config.TextColumn("Obywatelstwo", width="small"),
