@@ -13,6 +13,7 @@ import io
 import sys
 from pathlib import Path
 from datetime import datetime, date
+import requests
 
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -20,6 +21,62 @@ import config
 from excel_reader import wczytaj_excel, raport_walidacji, kod_pocztowy_do_nfz, waliduj_pesel
 from kedu_generator import generuj_wszystkie_kedu
 from pdf_confirmations import generuj_potwierdzenia
+
+
+
+# === POBIERANIE DANYCH PO NIP ===
+def pobierz_dane_z_nip(nip: str) -> dict | None:
+    """Pobiera dane firmy z Białej Listy VAT (MF) lub REGON (GUS)"""
+    nip = nip.strip().replace("-", "")
+    if len(nip) != 10:
+        return None
+    
+    # Próba 1: Biała Lista VAT (Ministerstwo Finansów) — darmowe, bez klucza
+    try:
+        today = date.today().strftime("%Y-%m-%d")
+        url = f"https://wl-api.mf.gov.pl/api/search/nip/{nip}?date={today}"
+        resp = requests.get(url, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            subject = data.get("result", {}).get("subject")
+            if subject:
+                nazwa = subject.get("name", "")
+                regon = subject.get("regon", "")
+                adres = subject.get("residenceAddress") or subject.get("workingAddress") or ""
+                return {
+                    "nazwa": nazwa,
+                    "regon": regon,
+                    "adres": adres,
+                    "status_vat": subject.get("statusVat", ""),
+                    "zrodlo": "Biała Lista VAT (MF)",
+                }
+    except Exception:
+        pass
+    
+    # Próba 2: KRS API (Ministerstwo Sprawiedliwości) — darmowe
+    try:
+        url = f"https://api-krs.ms.gov.pl/api/krs/OdpisAktualny?nip={nip}&rejestr=P&format=json"
+        resp = requests.get(url, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            odpis = data.get("odpis", {})
+            dane = odpis.get("dane", {}).get("dzial1", {})
+            nazwa = dane.get("danePodmiotu", {}).get("nazwa", "")
+            adres_d = dane.get("siedzibaIAdres", {}).get("adres", {})
+            regon = dane.get("danePodmiotu", {}).get("identyfikatory", {}).get("regon", "")
+            adres = f"{adres_d.get('ulica', '')} {adres_d.get('nrDomu', '')}, {adres_d.get('kodPocztowy', '')} {adres_d.get('miejscowosc', '')}".strip(", ")
+            if nazwa:
+                return {
+                    "nazwa": nazwa,
+                    "regon": regon,
+                    "adres": adres,
+                    "status_vat": "",
+                    "zrodlo": "KRS (MS)",
+                }
+    except Exception:
+        pass
+    
+    return None
 
 # === PAGE CONFIG ===
 st.set_page_config(page_title="Płatnik Auto", page_icon="📋", layout="wide")
@@ -123,13 +180,28 @@ with st.sidebar:
 
     # --- DANE PŁATNIKA ---
     st.header("🏢 Dane płatnika")
-    nip = st.text_input("NIP", placeholder="7161212863")
-    regon = st.text_input("REGON", placeholder="380505464")
-    nazwa = st.text_input("Nazwa firmy", placeholder='"U FRYZJERA"')
-    pesel_pl = st.text_input("PESEL właściciela", placeholder="71111104448")
-    nazwisko_pl = st.text_input("Nazwisko właściciela", placeholder="MATYJASZEK")
-    imie_pl = st.text_input("Imię właściciela", placeholder="AGNIESZKA")
-    data_ur_pl = st.text_input("Data urodzenia właśc.", placeholder="1971-11-11")
+    nip = st.text_input("NIP", placeholder="", help="Wpisz NIP i kliknij Pobierz dane")
+    
+    if st.button("🔍 Pobierz dane z GUS/KRS", use_container_width=True, disabled=not nip.strip()):
+        with st.spinner("Szukam..."):
+            wynik = pobierz_dane_z_nip(nip)
+            if wynik:
+                st.session_state["auto_nazwa"] = wynik["nazwa"]
+                st.session_state["auto_regon"] = wynik["regon"]
+                st.session_state["auto_adres"] = wynik.get("adres", "")
+                st.session_state["auto_zrodlo"] = wynik["zrodlo"]
+                st.success(f"✅ Znaleziono: {wynik['nazwa']}")
+                st.caption(f"Źródło: {wynik['zrodlo']}")
+                st.rerun()
+            else:
+                st.error("Nie znaleziono firmy o podanym NIP")
+    
+    regon = st.text_input("REGON", value=st.session_state.get("auto_regon", ""), placeholder="")
+    nazwa = st.text_input("Nazwa firmy", value=st.session_state.get("auto_nazwa", ""), placeholder="")
+    pesel_pl = st.text_input("PESEL właściciela", placeholder="")
+    nazwisko_pl = st.text_input("Nazwisko właściciela", placeholder="")
+    imie_pl = st.text_input("Imię właściciela", placeholder="")
+    data_ur_pl = st.text_input("Data urodzenia właśc.", placeholder="")
 
     if nip and len(nip.strip()) != 10:
         st.warning("NIP powinien mieć 10 cyfr")
@@ -146,8 +218,8 @@ with st.sidebar:
 
     # --- BIURO ---
     st.header("🖨️ Dane biura (na PDF)")
-    nazwa_biura = st.text_input("Nazwa biura", value="ABACUS CENTRUM KSIĘGOWE")
-    adres_biura = st.text_input("Adres biura", placeholder="ul. Przykładowa 1, 24-100 Puławy")
+    nazwa_biura = st.text_input("Nazwa biura", value="")
+    adres_biura = st.text_input("Adres biura", placeholder="")
 
 
 def _ustaw_config():
