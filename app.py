@@ -47,6 +47,45 @@ for key, default in [
 # ============================================================
 #  SIDEBAR
 # ============================================================
+KODY_TYTULU = [
+    "0110 — Pracownik (umowa o pracę)",
+    "0111 — Pracownik młodociany",
+    "0120 — Osoba odbywająca służbę zastępczą",
+    "0125 — Praktykant absolwent",
+    "0126 — Pracownik tymczasowy",
+    "0411 — Zleceniobiorca (pełne ubezp.)",
+    "0417 — Zleceniobiorca (tylko zdrowotne)",
+    "0426 — Niania (umowa uaktywniająca)",
+    "0428 — Członek rady nadzorczej (zlecenie)",
+    "0510 — Osoba prowadząca działalność gosp.",
+    "0511 — Osoba współpracująca z prowadzącym działalność",
+    "0540 — Działalność — preferencyjne składki",
+    "0570 — Działalność — ulga na start",
+    "0580 — Działalność — Mały ZUS",
+    "0590 — Działalność — Mały ZUS Plus",
+    "0592 — Mały ZUS Plus z prawem do renty",
+    "0514 — Działalność — wakacje składkowe",
+    "0610 — Poseł lub senator",
+    "0700 — Stypendysta sportowy",
+    "0800 — Duchowny",
+    "0811 — Duchowny (bez prawa do emerytury)",
+    "0860 — Pomocnik rolnika",
+    "0920 — Osoba na stażu/szkoleniu z PUP",
+    "0921 — Niepełnosprawny z PUP na szkoleniu/stażu",
+    "1110 — Żołnierz niezawodowy (służba)",
+    "1211 — Urlop wychowawczy",
+    "1240 — Osoba pobierająca zasiłek macierzyński",
+    "1812 — Student odbywający staż adaptacyjny",
+    "1813 — Student/doktorant",
+    "1910 — Rolnik/domownik KRUS",
+    "2000 — Emeryt lub rencista",
+    "2110 — Pobierający świadczenie pielęgnacyjne",
+    "2241 — Członek rady nadzorczej",
+    "2400 — Marynarz (od 2026)",
+    "2500 — Niania (umowa uaktywniająca, budżet)",
+    "3000 — Osoba objęta ubezp. zdrowotnym (inna)",
+]
+
 with st.sidebar:
     # --- OPERACJA ---
     st.header("🎯 Rodzaj operacji")
@@ -68,13 +107,7 @@ with st.sidebar:
 
     if typ_operacji in ("ZUA", "ZZA"):
         data_zgloszenia = st.date_input("Data zgłoszenia", value=date.today())
-        kod_tytulu = st.selectbox("Kod tytułu ubezpieczenia", [
-            "0110 — Pracownik (umowa o pracę)",
-            "0411 — Zleceniobiorca",
-            "0120 — Praktyka absolwencka",
-            "0510 — Osoba współpracująca",
-            "2241 — Członek rady nadzorczej",
-        ])
+        kod_tytulu = st.selectbox("Kod tytułu ubezpieczenia", KODY_TYTULU)
         kod_tytulu_val = kod_tytulu.split(" — ")[0]
 
         if typ_operacji == "ZUA":
@@ -90,10 +123,7 @@ with st.sidebar:
 
     elif typ_operacji == "ZWUA":
         data_wyrejestrowania = st.date_input("Data wyrejestrowania", value=date.today())
-        kod_tytulu = st.selectbox("Kod tytułu ubezpieczenia", [
-            "0110 — Pracownik", "0411 — Zleceniobiorca",
-            "0120 — Praktyka", "0510 — Współpracujący", "2241 — Rada nadzorcza",
-        ])
+        kod_tytulu = st.selectbox("Kod tytułu ubezpieczenia", KODY_TYTULU)
         kod_tytulu_val = kod_tytulu.split(" — ")[0]
         kod_wyrejestrowania = st.selectbox("Kod przyczyny wyrejestrowania", [
             "100 — Ustanie tytułu do ubezpieczeń",
@@ -103,9 +133,7 @@ with st.sidebar:
         kod_wyr_val = kod_wyrejestrowania.split(" — ")[0]
 
     elif typ_operacji == "RCA":
-        kod_tytulu = st.selectbox("Kod tytułu ubezpieczenia", [
-            "0110 — Pracownik", "0411 — Zleceniobiorca",
-        ])
+        kod_tytulu = st.selectbox("Kod tytułu ubezpieczenia", KODY_TYTULU)
         kod_tytulu_val = kod_tytulu.split(" — ")[0]
 
     elif typ_operacji == "ZIUA":
@@ -231,7 +259,7 @@ if uploaded:
                 "PESEL": st.column_config.TextColumn("PESEL", width="medium"),
                 "Nr paszportu": st.column_config.TextColumn("Nr paszportu", width="medium"),
                 "Kod tytułu": st.column_config.SelectboxColumn("Kod tytułu",
-                    options=["0110", "0411", "0120", "0510", "2241"], width="small"),
+                    options=[k.split(" — ")[0] for k in KODY_TYTULU], width="small"),
                 "NFZ (auto)": st.column_config.SelectboxColumn("NFZ",
                     options=[f"{i:02d}" for i in range(1, 17)], width="small"),
                 "Obywatelstwo": st.column_config.TextColumn("Obywatelstwo", width="small"),
