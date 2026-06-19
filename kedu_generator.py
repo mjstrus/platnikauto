@@ -483,16 +483,19 @@ def _buduj_zuszua(root, pracownicy, doc_id_start=1):
 # ============================================================
 def _buduj_zuszza(root, pracownicy, doc_id_start=1):
     """
-    ZUSZZA — zgłoszenie TYLKO do ubezpieczenia zdrowotnego.
-    Struktura ZZA jest PROSTSZA niż ZUA:
-      I   - dane organizacyjne
-      II  - dane płatnika
-      III - dane ubezpieczonego
-      IV  - obywatelstwo, płeć
-      V   - kod tytułu
-      VI  - ubezpieczenie zdrowotne (data + NFZ)
-      VII - adres zamieszkania
-      VIII - data wypełnienia
+    ZUSZZA — zgłoszenie do ubezpieczenia zdrowotnego.
+    Struktura wg Enova (witkowska_zza.xml):
+      I    - typ (true)
+      II   - dane płatnika
+      III  - dane ubezpieczonego
+      IV   - obywatelstwo, płeć
+      V    - kod tytułu + TERYT
+      VI   - ubezp. zdrowotne (data + NFZ)
+      VII  - puste
+      VIII - adres zamieszkania
+      IX   - adres korespondencyjny
+      X    - puste
+      XI   - data wypełnienia
     """
     poprawni = [p for p in pracownicy if not p.bledy]
 
@@ -500,7 +503,7 @@ def _buduj_zuszza(root, pracownicy, doc_id_start=1):
         zza = ET.SubElement(root, "ZUSZZA")
         zza.set("id_dokumentu", str(doc_id_start + idx))
 
-        # I — Typ zgłoszenia
+        # I
         sek_i = _el(zza, "I")
         _el(sek_i, "p1", "true")
 
@@ -518,8 +521,7 @@ def _buduj_zuszza(root, pracownicy, doc_id_start=1):
 
         # IV — Obywatelstwo i płeć
         sek_iv = _el(zza, "IV")
-        obyw = _odmien_obywatelstwo(p.obywatelstwo)
-        _el(sek_iv, "p3", obyw)
+        _el(sek_iv, "p3", _odmien_obywatelstwo(p.obywatelstwo))
         plec = ""
         if p.pesel and len(p.pesel) >= 10:
             try:
@@ -529,37 +531,56 @@ def _buduj_zuszza(root, pracownicy, doc_id_start=1):
         if plec:
             _el(sek_iv, "p4", plec)
 
-        # V — Kod tytułu ubezpieczenia
+        # V — Kod tytułu
         sek_v = _el(zza, "V")
         p1v = _el(sek_v, "p1")
         _el(p1v, "p1", str(p.kod_tytulu).zfill(4))
         _el(p1v, "p2", "0")
         _el(p1v, "p3", "0")
 
-        # VI — Ubezpieczenie zdrowotne (data + NFZ)
+        # VI — Ubezp. zdrowotne
         sek_vi = _el(zza, "VI")
         data_zgl = _fmt_data(p.data_zgłoszenia) or datetime.now().strftime("%Y-%m-%d")
         _el(sek_vi, "p1", data_zgl)
         kod_nfz = str(p.kod_nfz).zfill(2) if p.kod_nfz else "07"
         _el(sek_vi, "p2", kod_nfz + "R")
 
-        # VII — Adres zamieszkania
-        sek_vii = _el(zza, "VII")
-        if p.kod_pocztowy:
-            _el(sek_vii, "p1", str(p.kod_pocztowy).replace("-", ""))
-        if p.miejscowosc:
-            _el(sek_vii, "p2", p.miejscowosc.upper())
-            _el(sek_vii, "p3", p.miejscowosc.upper())
-        if p.ulica:
-            _el(sek_vii, "p4", p.ulica.upper())
-        if p.nr_domu:
-            _el(sek_vii, "p5", str(p.nr_domu))
-        if p.nr_lokalu:
-            _el(sek_vii, "p6", str(p.nr_lokalu))
+        # VII — puste
+        _el(zza, "VII")
 
-        # VIII — Data wypełnienia
+        # VIII — Adres zamieszkania
         sek_viii = _el(zza, "VIII")
-        _el(sek_viii, "p1", datetime.now().strftime("%Y-%m-%d"))
+        if p.kod_pocztowy:
+            _el(sek_viii, "p1", str(p.kod_pocztowy).replace("-", ""))
+        if p.miejscowosc:
+            _el(sek_viii, "p2", p.miejscowosc.upper())
+            _el(sek_viii, "p3", p.miejscowosc.upper())
+        if p.ulica:
+            _el(sek_viii, "p4", p.ulica.upper())
+        if p.nr_domu:
+            _el(sek_viii, "p5", str(p.nr_domu))
+        if p.nr_lokalu:
+            _el(sek_viii, "p6", str(p.nr_lokalu))
+
+        # IX — Adres korespondencyjny (taki sam jak zamieszkania)
+        sek_ix = _el(zza, "IX")
+        if p.kod_pocztowy:
+            _el(sek_ix, "p1", str(p.kod_pocztowy).replace("-", ""))
+        if p.miejscowosc:
+            _el(sek_ix, "p2", p.miejscowosc.upper())
+        if p.ulica:
+            _el(sek_ix, "p4", p.ulica.upper())
+        if p.nr_domu:
+            _el(sek_ix, "p5", str(p.nr_domu))
+        if p.nr_lokalu:
+            _el(sek_ix, "p6", str(p.nr_lokalu))
+
+        # X — puste
+        _el(zza, "X")
+
+        # XI — Data wypełnienia
+        sek_xi = _el(zza, "XI")
+        _el(sek_xi, "p1", datetime.now().strftime("%Y-%m-%d"))
 
     return len(poprawni)
 
@@ -568,14 +589,23 @@ def _buduj_zuszza(root, pracownicy, doc_id_start=1):
 #  ZWUA — Wyrejestrowanie z ubezpieczeń
 # ============================================================
 def _buduj_zwua(root, pracownicy, doc_id_start=1):
-    """ZWUA — wyrejestrowanie z ubezpieczeń społecznych i/lub zdrowotnego."""
+    """
+    ZWUA — wyrejestrowanie z ubezpieczeń.
+    Struktura wg Enova (wiejak_ZWUA.xml):
+      I   - typ (true)
+      II  - dane płatnika
+      III - dane ubezpieczonego
+      IV  - wyrejestrowanie z ubezp. społecznych (kod tytułu + data + przyczyna)
+      V   - wyrejestrowanie z ubezp. zdrowotnego (data + NFZ + kod przyczyny)
+      VI  - data wypełnienia
+    """
     poprawni = [p for p in pracownicy if not p.bledy]
 
     for idx, p in enumerate(poprawni):
         zwua = ET.SubElement(root, "ZUSZWUA")
         zwua.set("id_dokumentu", str(doc_id_start + idx))
 
-        # I — Typ
+        # I
         sek_i = _el(zwua, "I")
         _el(sek_i, "p1", "true")
 
@@ -591,23 +621,28 @@ def _buduj_zwua(root, pracownicy, doc_id_start=1):
         if p.data_urodzenia:
             _el(sek_iii, "p7", _fmt_data(p.data_urodzenia))
 
-        # IV — Wyrejestrowanie
+        # IV — Wyrejestrowanie z ubezpieczeń społecznych
         sek_iv = _el(zwua, "IV")
-        # Kod tytułu ubezpieczenia
         p1v = _el(sek_iv, "p1")
         _el(p1v, "p1", str(p.kod_tytulu).zfill(4))
         _el(p1v, "p2", "0")
         _el(p1v, "p3", "0")
-        # Data wyrejestrowania
         data_wyr = _fmt_data(p.data_zgłoszenia) or datetime.now().strftime("%Y-%m-%d")
         _el(sek_iv, "p2", data_wyr)
-        # Kod przyczyny wyrejestrowania
         kod_przyczyny = str(getattr(p, 'kod_wyrejestrowania', '100')).strip() or "100"
         _el(sek_iv, "p3", kod_przyczyny)
 
-        # V — Data wypełnienia
+        # V — Wyrejestrowanie z ubezp. zdrowotnego
         sek_v = _el(zwua, "V")
-        _el(sek_v, "p1", datetime.now().strftime("%Y-%m-%d"))
+        _el(sek_v, "p1", data_wyr)
+        kod_nfz = str(p.kod_nfz).zfill(2) if p.kod_nfz else "07"
+        _el(sek_v, "p2", kod_nfz + "R")
+        _el(sek_v, "p3", "402")
+        _el(sek_v, "p5", "1")
+
+        # VI — Data wypełnienia
+        sek_vi = _el(zwua, "VI")
+        _el(sek_vi, "p1", datetime.now().strftime("%Y-%m-%d"))
 
     return len(poprawni)
 
