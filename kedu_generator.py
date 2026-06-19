@@ -52,8 +52,11 @@ def _buduj_platnik(parent):
     if pesel:
         _el(sek, "p3", pesel)
     nazwa = str(config.NAZWA_PLATNIKA).strip()
-    if nazwa:
-        _el(sek, "p6", nazwa)
+    nazwa_skr = str(getattr(config, 'NAZWA_SKROCONA', '')).strip()
+    if nazwa_skr:
+        _el(sek, "p6", nazwa_skr[:31])
+    elif nazwa:
+        _el(sek, "p6", nazwa[:31])
     if hasattr(config, 'NAZWISKO_PLATNIKA') and str(config.NAZWISKO_PLATNIKA).strip():
         _el(sek, "p7", str(config.NAZWISKO_PLATNIKA).strip())
     if hasattr(config, 'IMIE_PLATNIKA') and str(config.IMIE_PLATNIKA).strip():

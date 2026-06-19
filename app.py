@@ -197,7 +197,10 @@ with st.sidebar:
                 st.error("Nie znaleziono firmy o podanym NIP")
     
     regon = st.text_input("REGON", value=st.session_state.get("auto_regon", ""), placeholder="")
-    nazwa = st.text_input("Nazwa firmy", value=st.session_state.get("auto_nazwa", ""), placeholder="")
+    nazwa = st.text_input("Nazwa firmy (pełna)", value=st.session_state.get("auto_nazwa", ""), placeholder="")
+    nazwa_skr = st.text_input("Nazwa skrócona (max 31 znaków)", placeholder="", max_chars=31, help="Wymagana dla spółek — max 31 znaków w KEDU")
+    if nazwa and not nazwa_skr and len(nazwa) > 31:
+        st.warning(f"⚠️ Nazwa ma {len(nazwa)} znaków — wpisz skróconą (max 31)")
     pesel_pl = st.text_input("PESEL właściciela", placeholder="")
     nazwisko_pl = st.text_input("Nazwisko właściciela", placeholder="")
     imie_pl = st.text_input("Imię właściciela", placeholder="")
@@ -226,6 +229,7 @@ def _ustaw_config():
     config.NIP_PLATNIKA = nip.strip()
     config.REGON_PLATNIKA = regon.strip()
     config.NAZWA_PLATNIKA = nazwa.strip()
+    config.NAZWA_SKROCONA = nazwa_skr.strip()
     config.PESEL_PLATNIKA = pesel_pl.strip()
     config.NAZWISKO_PLATNIKA = nazwisko_pl.strip()
     config.IMIE_PLATNIKA = imie_pl.strip()
