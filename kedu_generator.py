@@ -482,18 +482,32 @@ def _buduj_zuszua(root, pracownicy, doc_id_start=1):
 #  ZUSZZA — Zgłoszenie tylko do ubezpieczenia zdrowotnego
 # ============================================================
 def _buduj_zuszza(root, pracownicy, doc_id_start=1):
-    """ZUSZZA — zgłoszenie TYLKO do ubezpieczenia zdrowotnego."""
+    """
+    ZUSZZA — zgłoszenie TYLKO do ubezpieczenia zdrowotnego.
+    Struktura ZZA jest PROSTSZA niż ZUA:
+      I   - dane organizacyjne
+      II  - dane płatnika
+      III - dane ubezpieczonego
+      IV  - obywatelstwo, płeć
+      V   - kod tytułu
+      VI  - ubezpieczenie zdrowotne (data + NFZ)
+      VII - adres zamieszkania
+      VIII - data wypełnienia
+    """
     poprawni = [p for p in pracownicy if not p.bledy]
 
     for idx, p in enumerate(poprawni):
         zza = ET.SubElement(root, "ZUSZZA")
         zza.set("id_dokumentu", str(doc_id_start + idx))
 
+        # I — Typ zgłoszenia
         sek_i = _el(zza, "I")
         _el(sek_i, "p1", "true")
 
+        # II — Dane płatnika
         _buduj_platnik(zza)
 
+        # III — Dane ubezpieczonego
         sek_iii = _el(zza, "III")
         if p.pesel:
             _el(sek_iii, "p1", str(p.pesel))
@@ -502,6 +516,7 @@ def _buduj_zuszza(root, pracownicy, doc_id_start=1):
         if p.data_urodzenia:
             _el(sek_iii, "p7", _fmt_data(p.data_urodzenia))
 
+        # IV — Obywatelstwo i płeć
         sek_iv = _el(zza, "IV")
         obyw = _odmien_obywatelstwo(p.obywatelstwo)
         _el(sek_iv, "p3", obyw)
@@ -514,42 +529,37 @@ def _buduj_zuszza(root, pracownicy, doc_id_start=1):
         if plec:
             _el(sek_iv, "p4", plec)
 
+        # V — Kod tytułu ubezpieczenia
         sek_v = _el(zza, "V")
         p1v = _el(sek_v, "p1")
         _el(p1v, "p1", str(p.kod_tytulu).zfill(4))
         _el(p1v, "p2", "0")
         _el(p1v, "p3", "0")
 
+        # VI — Ubezpieczenie zdrowotne (data + NFZ)
         sek_vi = _el(zza, "VI")
         data_zgl = _fmt_data(p.data_zgłoszenia) or datetime.now().strftime("%Y-%m-%d")
         _el(sek_vi, "p1", data_zgl)
         kod_nfz = str(p.kod_nfz).zfill(2) if p.kod_nfz else "07"
         _el(sek_vi, "p2", kod_nfz + "R")
 
-        for s in ("VII", "VIII", "IX"):
-            _el(zza, s)
-
-        sek_x = _el(zza, "X")
-        _el(sek_x, "p3")
-
-        sek_xi = _el(zza, "XI")
+        # VII — Adres zamieszkania
+        sek_vii = _el(zza, "VII")
         if p.kod_pocztowy:
-            _el(sek_xi, "p1", str(p.kod_pocztowy).replace("-", ""))
+            _el(sek_vii, "p1", str(p.kod_pocztowy).replace("-", ""))
         if p.miejscowosc:
-            _el(sek_xi, "p2", p.miejscowosc.upper())
-            _el(sek_xi, "p3", p.miejscowosc.upper())
+            _el(sek_vii, "p2", p.miejscowosc.upper())
+            _el(sek_vii, "p3", p.miejscowosc.upper())
         if p.ulica:
-            _el(sek_xi, "p4", p.ulica.upper())
+            _el(sek_vii, "p4", p.ulica.upper())
         if p.nr_domu:
-            _el(sek_xi, "p5", str(p.nr_domu))
+            _el(sek_vii, "p5", str(p.nr_domu))
         if p.nr_lokalu:
-            _el(sek_xi, "p6", str(p.nr_lokalu))
+            _el(sek_vii, "p6", str(p.nr_lokalu))
 
-        _el(zza, "XII")
-        _el(zza, "XIII")
-
-        sek_xiv = _el(zza, "XIV")
-        _el(sek_xiv, "p1", datetime.now().strftime("%Y-%m-%d"))
+        # VIII — Data wypełnienia
+        sek_viii = _el(zza, "VIII")
+        _el(sek_viii, "p1", datetime.now().strftime("%Y-%m-%d"))
 
     return len(poprawni)
 
