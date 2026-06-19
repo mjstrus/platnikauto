@@ -347,6 +347,12 @@ def wczytaj_excel(sciezka: str | Path, arkusz: str = None) -> list[Pracownik]:
             if not kwargs.get("pesel") and not kwargs.get("nazwisko") and not kwargs.get("imie") and not kwargs.get("nr_paszportu"):
                 continue
             
+            # PESEL: dopełnij do 11 cyfr zerem (osoby urodzone po 2000)
+            pesel_val = str(kwargs.get("pesel", "")).strip()
+            if pesel_val and pesel_val.isdigit() and len(pesel_val) == 10:
+                kwargs["pesel"] = "0" + pesel_val
+                logger.info(f"Auto-dopełnienie PESEL: {pesel_val} → 0{pesel_val}")
+            
             p = Pracownik(**kwargs)
             
             # Auto-detekcja NFZ z kodu pocztowego
