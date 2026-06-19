@@ -226,6 +226,120 @@ def _buduj_zusdra(root, pracownicy, doc_id=1):
 # ============================================================
 #  HELPERS
 # ============================================================
+
+# Odmiana obywatelstwa: kraj → przymiotnik (rodzaj nijaki)
+_OBYWATELSTWO_MAP = {
+    # Kraje najczęściej spotykane w biurach rachunkowych
+    "POLSKA": "POLSKIE", "PL": "POLSKIE", "POLAND": "POLSKIE",
+    "UKRAINA": "UKRAIŃSKIE", "UA": "UKRAIŃSKIE", "UKRAINE": "UKRAIŃSKIE",
+    "BIAŁORUŚ": "BIAŁORUSKIE", "BY": "BIAŁORUSKIE", "BELARUS": "BIAŁORUSKIE",
+    "INDIE": "INDYJSKIE", "INDIA": "INDYJSKIE", "IN": "INDYJSKIE",
+    "INDONEZJA": "INDONEZYJSKIE", "INDONESIA": "INDONEZYJSKIE", "ID": "INDONEZYJSKIE",
+    "FILIPINY": "FILIPIŃSKIE", "PHILIPPINES": "FILIPIŃSKIE", "PH": "FILIPIŃSKIE",
+    "KOLUMBIA": "KOLUMBIJSKIE", "COLOMBIA": "KOLUMBIJSKIE", "CO": "KOLUMBIJSKIE",
+    "NEPAL": "NEPALSKIE", "NP": "NEPALSKIE",
+    "BANGLADESZ": "BANGLADESKIE", "BANGLADESH": "BANGLADESKIE", "BD": "BANGLADESKIE",
+    "WIETNAM": "WIETNAMSKIE", "VIETNAM": "WIETNAMSKIE", "VN": "WIETNAMSKIE",
+    "GRUZJA": "GRUZIŃSKIE", "GEORGIA": "GRUZIŃSKIE", "GE": "GRUZIŃSKIE",
+    "MOŁDAWIA": "MOŁDAWSKIE", "MOLDOVA": "MOŁDAWSKIE", "MD": "MOŁDAWSKIE",
+    "TURCJA": "TURECKIE", "TURKEY": "TURECKIE", "TÜRKIYE": "TURECKIE", "TR": "TURECKIE",
+    "UZBEKISTAN": "UZBECKIE", "UZ": "UZBECKIE",
+    "TADŻYKISTAN": "TADŻYCKIE", "TAJIKISTAN": "TADŻYCKIE", "TJ": "TADŻYCKIE",
+    "KAZACHSTAN": "KAZACHSTAŃSKIE", "KAZAKHSTAN": "KAZACHSTAŃSKIE", "KZ": "KAZACHSTAŃSKIE",
+    "KIRGISTAN": "KIRGISKIE", "KYRGYZSTAN": "KIRGISKIE", "KG": "KIRGISKIE",
+    "TURKMENISTAN": "TURKMEŃSKIE", "TM": "TURKMEŃSKIE",
+    "ARMENIA": "ARMEŃSKIE", "AM": "ARMEŃSKIE",
+    "AZERBEJDŻAN": "AZERBEJDŻAŃSKIE", "AZERBAIJAN": "AZERBEJDŻAŃSKIE", "AZ": "AZERBEJDŻAŃSKIE",
+    "PAKISTAN": "PAKISTAŃSKIE", "PK": "PAKISTAŃSKIE",
+    "SRI LANKA": "LANKIJSKIE", "LK": "LANKIJSKIE",
+    "CHINY": "CHIŃSKIE", "CHINA": "CHIŃSKIE", "CN": "CHIŃSKIE",
+    "TAJLANDIA": "TAJSKIE", "THAILAND": "TAJSKIE", "TH": "TAJSKIE",
+    "MALEZJA": "MALEZYJSKIE", "MALAYSIA": "MALEZYJSKIE", "MY": "MALEZYJSKIE",
+    "ROSJA": "ROSYJSKIE", "RUSSIA": "ROSYJSKIE", "RU": "ROSYJSKIE",
+    "NIEMCY": "NIEMIECKIE", "GERMANY": "NIEMIECKIE", "DE": "NIEMIECKIE",
+    "FRANCJA": "FRANCUSKIE", "FRANCE": "FRANCUSKIE", "FR": "FRANCUSKIE",
+    "WIELKA BRYTANIA": "BRYTYJSKIE", "UNITED KINGDOM": "BRYTYJSKIE", "GB": "BRYTYJSKIE",
+    "WŁOCHY": "WŁOSKIE", "ITALY": "WŁOSKIE", "IT": "WŁOSKIE",
+    "HISZPANIA": "HISZPAŃSKIE", "SPAIN": "HISZPAŃSKIE", "ES": "HISZPAŃSKIE",
+    "PORTUGALIA": "PORTUGALSKIE", "PORTUGAL": "PORTUGALSKIE", "PT": "PORTUGALSKIE",
+    "HOLANDIA": "HOLENDERSKIE", "NETHERLANDS": "HOLENDERSKIE", "NL": "HOLENDERSKIE",
+    "BELGIA": "BELGIJSKIE", "BELGIUM": "BELGIJSKIE", "BE": "BELGIJSKIE",
+    "CZECHY": "CZESKIE", "CZECH REPUBLIC": "CZESKIE", "CZECHIA": "CZESKIE", "CZ": "CZESKIE",
+    "SŁOWACJA": "SŁOWACKIE", "SLOVAKIA": "SŁOWACKIE", "SK": "SŁOWACKIE",
+    "LITWA": "LITEWSKIE", "LITHUANIA": "LITEWSKIE", "LT": "LITEWSKIE",
+    "ŁOTWA": "ŁOTEWSKIE", "LATVIA": "ŁOTEWSKIE", "LV": "ŁOTEWSKIE",
+    "ESTONIA": "ESTOŃSKIE", "EE": "ESTOŃSKIE",
+    "RUMUNIA": "RUMUŃSKIE", "ROMANIA": "RUMUŃSKIE", "RO": "RUMUŃSKIE",
+    "BUŁGARIA": "BUŁGARSKIE", "BULGARIA": "BUŁGARSKIE", "BG": "BUŁGARSKIE",
+    "WĘGRY": "WĘGIERSKIE", "HUNGARY": "WĘGIERSKIE", "HU": "WĘGIERSKIE",
+    "CHORWACJA": "CHORWACKIE", "CROATIA": "CHORWACKIE", "HR": "CHORWACKIE",
+    "SERBIA": "SERBSKIE", "RS": "SERBSKIE",
+    "BOŚNIA I HERCEGOWINA": "BOŚNIACKIE", "BOSNIA": "BOŚNIACKIE", "BA": "BOŚNIACKIE",
+    "ALBANIA": "ALBAŃSKIE", "AL": "ALBAŃSKIE",
+    "MACEDONIA PÓŁNOCNA": "MACEDOŃSKIE", "NORTH MACEDONIA": "MACEDOŃSKIE", "MK": "MACEDOŃSKIE",
+    "KOSOWO": "KOSOWSKIE", "KOSOVO": "KOSOWSKIE", "XK": "KOSOWSKIE",
+    "CZARNOGÓRA": "CZARNOGÓRSKIE", "MONTENEGRO": "CZARNOGÓRSKIE", "ME": "CZARNOGÓRSKIE",
+    "SZWECJA": "SZWEDZKIE", "SWEDEN": "SZWEDZKIE", "SE": "SZWEDZKIE",
+    "NORWEGIA": "NORWESKIE", "NORWAY": "NORWESKIE", "NO": "NORWESKIE",
+    "DANIA": "DUŃSKIE", "DENMARK": "DUŃSKIE", "DK": "DUŃSKIE",
+    "FINLANDIA": "FIŃSKIE", "FINLAND": "FIŃSKIE", "FI": "FIŃSKIE",
+    "AUSTRIA": "AUSTRIACKIE", "AT": "AUSTRIACKIE",
+    "SZWAJCARIA": "SZWAJCARSKIE", "SWITZERLAND": "SZWAJCARSKIE", "CH": "SZWAJCARSKIE",
+    "IRLANDIA": "IRLANDZKIE", "IRELAND": "IRLANDZKIE", "IE": "IRLANDZKIE",
+    "GRECJA": "GRECKIE", "GREECE": "GRECKIE", "GR": "GRECKIE",
+    "SŁOWENIA": "SŁOWEŃSKIE", "SLOVENIA": "SŁOWEŃSKIE", "SI": "SŁOWEŃSKIE",
+    "MEKSYK": "MEKSYKAŃSKIE", "MEXICO": "MEKSYKAŃSKIE", "MX": "MEKSYKAŃSKIE",
+    "BRAZYLIA": "BRAZYLIJSKIE", "BRAZIL": "BRAZYLIJSKIE", "BR": "BRAZYLIJSKIE",
+    "ARGENTYNA": "ARGENTYŃSKIE", "ARGENTINA": "ARGENTYŃSKIE", "AR": "ARGENTYŃSKIE",
+    "PERU": "PERUWIAŃSKIE", "PE": "PERUWIAŃSKIE",
+    "WENEZUELA": "WENEZUELSKIE", "VENEZUELA": "WENEZUELSKIE", "VE": "WENEZUELSKIE",
+    "EKWADOR": "EKWADORSKIE", "ECUADOR": "EKWADORSKIE", "EC": "EKWADORSKIE",
+    "BOLIWIA": "BOLIWIJSKIE", "BOLIVIA": "BOLIWIJSKIE", "BO": "BOLIWIJSKIE",
+    "CHILE": "CHILIJSKIE", "CL": "CHILIJSKIE",
+    "PARAGWAJ": "PARAGWAJSKIE", "PARAGUAY": "PARAGWAJSKIE", "PY": "PARAGWAJSKIE",
+    "URUGWAJ": "URUGWAJSKIE", "URUGUAY": "URUGWAJSKIE", "UY": "URUGWAJSKIE",
+    "KUBA": "KUBAŃSKIE", "CUBA": "KUBAŃSKIE", "CU": "KUBAŃSKIE",
+    "NIGERIA": "NIGERYJSKIE", "NG": "NIGERYJSKIE",
+    "ETIOPIA": "ETIOPSKIE", "ETHIOPIA": "ETIOPSKIE", "ET": "ETIOPSKIE",
+    "EGIPT": "EGIPSKIE", "EGYPT": "EGIPSKIE", "EG": "EGIPSKIE",
+    "MAROKO": "MAROKAŃSKIE", "MOROCCO": "MAROKAŃSKIE", "MA": "MAROKAŃSKIE",
+    "TUNEZJA": "TUNEZYJSKIE", "TUNISIA": "TUNEZYJSKIE", "TN": "TUNEZYJSKIE",
+    "ALGIERIA": "ALGIERSKIE", "ALGERIA": "ALGIERSKIE", "DZ": "ALGIERSKIE",
+    "KOREA POŁUDNIOWA": "KOREAŃSKIE", "SOUTH KOREA": "KOREAŃSKIE", "KR": "KOREAŃSKIE",
+    "JAPONIA": "JAPOŃSKIE", "JAPAN": "JAPOŃSKIE", "JP": "JAPOŃSKIE",
+    "MONGOLIA": "MONGOLSKIE", "MN": "MONGOLSKIE",
+    "MYANMAR": "MYANMARSKIE", "BIRMA": "BIRMAŃSKIE", "MM": "MYANMARSKIE",
+    "KAMBODŻA": "KAMBODŻAŃSKIE", "CAMBODIA": "KAMBODŻAŃSKIE", "KH": "KAMBODŻAŃSKIE",
+    "LAOS": "LAOTAŃSKIE", "LA": "LAOTAŃSKIE",
+    "USA": "AMERYKAŃSKIE", "STANY ZJEDNOCZONE": "AMERYKAŃSKIE", "UNITED STATES": "AMERYKAŃSKIE", "US": "AMERYKAŃSKIE",
+    "KANADA": "KANADYJSKIE", "CANADA": "KANADYJSKIE", "CA": "KANADYJSKIE",
+    "AUSTRALIA": "AUSTRALIJSKIE", "AU": "AUSTRALIJSKIE",
+    "NOWA ZELANDIA": "NOWOZELANDZKIE", "NEW ZEALAND": "NOWOZELANDZKIE", "NZ": "NOWOZELANDZKIE",
+    "IZRAEL": "IZRAELSKIE", "ISRAEL": "IZRAELSKIE", "IL": "IZRAELSKIE",
+    "IRAN": "IRAŃSKIE", "IR": "IRAŃSKIE",
+    "IRAK": "IRACKIE", "IRAQ": "IRACKIE", "IQ": "IRACKIE",
+    "SYRIA": "SYRYJSKIE", "SY": "SYRYJSKIE",
+    "LIBAN": "LIBAŃSKIE", "LEBANON": "LIBAŃSKIE", "LB": "LIBAŃSKIE",
+    "JORDANIA": "JORDAŃSKIE", "JORDAN": "JORDAŃSKIE", "JO": "JORDAŃSKIE",
+    "ARABIA SAUDYJSKA": "SAUDYJSKIE", "SAUDI ARABIA": "SAUDYJSKIE", "SA": "SAUDYJSKIE",
+}
+
+
+def _odmien_obywatelstwo(kraj_lub_kod: str) -> str:
+    """Konwertuje nazwę kraju lub kod na odmienione obywatelstwo"""
+    if not kraj_lub_kod:
+        return "POLSKIE"
+    raw = str(kraj_lub_kod).strip().upper()
+    # Jeśli już odmienione (kończy się na -SKIE, -CKIE, -ŃSKIE)
+    if raw.endswith("SKIE") or raw.endswith("CKIE"):
+        return raw
+    # Szukaj w mapie
+    result = _OBYWATELSTWO_MAP.get(raw)
+    if result:
+        return result
+    # Fallback: zwróć jak jest (wielkie litery)
+    logger.warning(f"Nieznane obywatelstwo: '{raw}' — wpisz odmienione ręcznie")
+    return raw
 def _fmt_data(data) -> str:
     if not data:
         return ""
@@ -298,9 +412,7 @@ def _buduj_zuszua(root, pracownicy, doc_id_start=1):
 
         # IV — Obywatelstwo i płeć
         sek_iv = _el(zua, "IV")
-        obyw = str(p.obywatelstwo).strip().upper() if p.obywatelstwo else "POLSKIE"
-        if obyw in ("PL", "POLSKA", "POLAND"):
-            obyw = "POLSKIE"
+        obyw = _odmien_obywatelstwo(p.obywatelstwo)
         _el(sek_iv, "p3", obyw)
         plec = ""
         if p.pesel and len(p.pesel) >= 10:
@@ -367,6 +479,175 @@ def _buduj_zuszua(root, pracownicy, doc_id_start=1):
 
 
 # ============================================================
+#  ZUSZZA — Zgłoszenie tylko do ubezpieczenia zdrowotnego
+# ============================================================
+def _buduj_zuszza(root, pracownicy, doc_id_start=1):
+    """ZUSZZA — zgłoszenie TYLKO do ubezpieczenia zdrowotnego."""
+    poprawni = [p for p in pracownicy if not p.bledy]
+
+    for idx, p in enumerate(poprawni):
+        zza = ET.SubElement(root, "ZUSZZA")
+        zza.set("id_dokumentu", str(doc_id_start + idx))
+
+        sek_i = _el(zza, "I")
+        _el(sek_i, "p1", "true")
+
+        _buduj_platnik(zza)
+
+        sek_iii = _el(zza, "III")
+        if p.pesel:
+            _el(sek_iii, "p1", str(p.pesel))
+        _el(sek_iii, "p5", p.nazwisko.upper())
+        _el(sek_iii, "p6", p.imie.upper())
+        if p.data_urodzenia:
+            _el(sek_iii, "p7", _fmt_data(p.data_urodzenia))
+
+        sek_iv = _el(zza, "IV")
+        obyw = _odmien_obywatelstwo(p.obywatelstwo)
+        _el(sek_iv, "p3", obyw)
+        plec = ""
+        if p.pesel and len(p.pesel) >= 10:
+            try:
+                plec = "K" if int(p.pesel[9]) % 2 == 0 else "M"
+            except ValueError:
+                pass
+        if plec:
+            _el(sek_iv, "p4", plec)
+
+        sek_v = _el(zza, "V")
+        p1v = _el(sek_v, "p1")
+        _el(p1v, "p1", str(p.kod_tytulu).zfill(4))
+        _el(p1v, "p2", "0")
+        _el(p1v, "p3", "0")
+
+        sek_vi = _el(zza, "VI")
+        data_zgl = _fmt_data(p.data_zgłoszenia) or datetime.now().strftime("%Y-%m-%d")
+        _el(sek_vi, "p1", data_zgl)
+        kod_nfz = str(p.kod_nfz).zfill(2) if p.kod_nfz else "07"
+        _el(sek_vi, "p2", kod_nfz + "R")
+
+        for s in ("VII", "VIII", "IX"):
+            _el(zza, s)
+
+        sek_x = _el(zza, "X")
+        _el(sek_x, "p3")
+
+        sek_xi = _el(zza, "XI")
+        if p.kod_pocztowy:
+            _el(sek_xi, "p1", str(p.kod_pocztowy).replace("-", ""))
+        if p.miejscowosc:
+            _el(sek_xi, "p2", p.miejscowosc.upper())
+            _el(sek_xi, "p3", p.miejscowosc.upper())
+        if p.ulica:
+            _el(sek_xi, "p4", p.ulica.upper())
+        if p.nr_domu:
+            _el(sek_xi, "p5", str(p.nr_domu))
+        if p.nr_lokalu:
+            _el(sek_xi, "p6", str(p.nr_lokalu))
+
+        _el(zza, "XII")
+        _el(zza, "XIII")
+
+        sek_xiv = _el(zza, "XIV")
+        _el(sek_xiv, "p1", datetime.now().strftime("%Y-%m-%d"))
+
+    return len(poprawni)
+
+
+# ============================================================
+#  ZWUA — Wyrejestrowanie z ubezpieczeń
+# ============================================================
+def _buduj_zwua(root, pracownicy, doc_id_start=1):
+    """ZWUA — wyrejestrowanie z ubezpieczeń społecznych i/lub zdrowotnego."""
+    poprawni = [p for p in pracownicy if not p.bledy]
+
+    for idx, p in enumerate(poprawni):
+        zwua = ET.SubElement(root, "ZUSZWUA")
+        zwua.set("id_dokumentu", str(doc_id_start + idx))
+
+        # I — Typ
+        sek_i = _el(zwua, "I")
+        _el(sek_i, "p1", "true")
+
+        # II — Dane płatnika
+        _buduj_platnik(zwua)
+
+        # III — Dane ubezpieczonego
+        sek_iii = _el(zwua, "III")
+        if p.pesel:
+            _el(sek_iii, "p1", str(p.pesel))
+        _el(sek_iii, "p5", p.nazwisko.upper())
+        _el(sek_iii, "p6", p.imie.upper())
+        if p.data_urodzenia:
+            _el(sek_iii, "p7", _fmt_data(p.data_urodzenia))
+
+        # IV — Wyrejestrowanie
+        sek_iv = _el(zwua, "IV")
+        # Kod tytułu ubezpieczenia
+        p1v = _el(sek_iv, "p1")
+        _el(p1v, "p1", str(p.kod_tytulu).zfill(4))
+        _el(p1v, "p2", "0")
+        _el(p1v, "p3", "0")
+        # Data wyrejestrowania
+        data_wyr = _fmt_data(p.data_zgłoszenia) or datetime.now().strftime("%Y-%m-%d")
+        _el(sek_iv, "p2", data_wyr)
+        # Kod przyczyny wyrejestrowania
+        kod_przyczyny = str(getattr(p, 'kod_wyrejestrowania', '100')).strip() or "100"
+        _el(sek_iv, "p3", kod_przyczyny)
+
+        # V — Data wypełnienia
+        sek_v = _el(zwua, "V")
+        _el(sek_v, "p1", datetime.now().strftime("%Y-%m-%d"))
+
+    return len(poprawni)
+
+
+# ============================================================
+#  ZIUA — Zmiana danych identyfikacyjnych ubezpieczonego
+# ============================================================
+def _buduj_ziua(root, pracownicy, doc_id_start=1):
+    """ZIUA — zmiana danych identyfikacyjnych (np. paszport → PESEL)."""
+    poprawni = [p for p in pracownicy if not p.bledy]
+
+    for idx, p in enumerate(poprawni):
+        ziua = ET.SubElement(root, "ZUSZIUA")
+        ziua.set("id_dokumentu", str(doc_id_start + idx))
+
+        # I — Dane płatnika
+        _buduj_platnik(ziua)
+
+        # II — Poprzednie dane identyfikacyjne
+        sek_ii = _el(ziua, "II")
+        # Poprzedni identyfikator
+        if p.poprzedni_typ_id == "2" and p.poprzedni_nr_dokumentu:
+            # Był paszport
+            _el(sek_ii, "p4", "2")  # typ: paszport
+            _el(sek_ii, "p5", str(p.poprzedni_nr_dokumentu))
+        elif p.poprzedni_nr_dokumentu:
+            _el(sek_ii, "p4", str(p.poprzedni_typ_id or "1"))
+            _el(sek_ii, "p5", str(p.poprzedni_nr_dokumentu))
+        _el(sek_ii, "p6", p.nazwisko.upper())
+        _el(sek_ii, "p7", p.imie.upper())
+        if p.data_urodzenia:
+            _el(sek_ii, "p8", _fmt_data(p.data_urodzenia))
+
+        # III — Aktualne (nowe) dane identyfikacyjne
+        sek_iii = _el(ziua, "III")
+        if p.pesel:
+            _el(sek_iii, "p1", str(p.pesel))
+        _el(sek_iii, "p6", p.nazwisko.upper())
+        _el(sek_iii, "p7", p.imie.upper())
+        if p.data_urodzenia:
+            _el(sek_iii, "p8", _fmt_data(p.data_urodzenia))
+
+        # IV — Data wypełnienia
+        sek_iv = _el(ziua, "IV")
+        _el(sek_iv, "p1", datetime.now().strftime("%Y-%m-%d"))
+
+    return len(poprawni)
+
+
+# ============================================================
 #  GŁÓWNA FUNKCJA
 # ============================================================
 def generuj_wszystkie_kedu(pracownicy, katalog):
@@ -377,6 +658,9 @@ def generuj_wszystkie_kedu(pracownicy, katalog):
 
     rca = [p for p in pracownicy if p.typ_deklaracji.upper() == "RCA" and not p.bledy]
     zua = [p for p in pracownicy if p.typ_deklaracji.upper() == "ZUA" and not p.bledy]
+    zza = [p for p in pracownicy if p.typ_deklaracji.upper() == "ZZA" and not p.bledy]
+    zwua = [p for p in pracownicy if p.typ_deklaracji.upper() == "ZWUA" and not p.bledy]
+    ziua = [p for p in pracownicy if p.typ_deklaracji.upper() == "ZIUA" and not p.bledy]
 
     if rca:
         root = _utworz_root()
@@ -396,5 +680,158 @@ def generuj_wszystkie_kedu(pracownicy, katalog):
         _zapisz_kedu(root, sciezka)
         wyniki["ZUA"] = sciezka
         logger.info(f"ZUA: {count} zgłoszeń")
+
+    if zza:
+        root = _utworz_root()
+        _buduj_naglowek(root)
+        count = _buduj_zuszza(root, zza, doc_id_start=1)
+        sciezka = katalog / f"ZZA_{ts}.xml"
+        _zapisz_kedu(root, sciezka)
+        wyniki["ZZA"] = sciezka
+        logger.info(f"ZZA: {count} zgłoszeń")
+
+    if zwua:
+        root = _utworz_root()
+        _buduj_naglowek(root)
+        count = _buduj_zwua(root, zwua, doc_id_start=1)
+        sciezka = katalog / f"ZWUA_{ts}.xml"
+        _zapisz_kedu(root, sciezka)
+        wyniki["ZWUA"] = sciezka
+        logger.info(f"ZWUA: {count} wyrejestrowań")
+
+    if ziua:
+        root = _utworz_root()
+        _buduj_naglowek(root)
+        count = _buduj_ziua(root, ziua, doc_id_start=1)
+        sciezka = katalog / f"ZIUA_{ts}.xml"
+        _zapisz_kedu(root, sciezka)
+        wyniki["ZIUA"] = sciezka
+        logger.info(f"ZIUA: {count} zmian danych")
+
+    return wyniki
+    """
+    ZUSZZA — zgłoszenie TYLKO do ubezpieczenia zdrowotnego.
+    Uproszczona wersja ZUA — bez składek społecznych.
+    """
+    poprawni = [p for p in pracownicy if not p.bledy]
+
+    for idx, p in enumerate(poprawni):
+        zza = ET.SubElement(root, "ZUSZZA")
+        zza.set("id_dokumentu", str(doc_id_start + idx))
+
+        # I — Typ zgłoszenia
+        sek_i = _el(zza, "I")
+        _el(sek_i, "p1", "true")
+
+        # II — Dane płatnika
+        _buduj_platnik(zza)
+
+        # III — Dane ubezpieczonego
+        sek_iii = _el(zza, "III")
+        if p.pesel:
+            _el(sek_iii, "p1", str(p.pesel))
+        _el(sek_iii, "p5", p.nazwisko.upper())
+        _el(sek_iii, "p6", p.imie.upper())
+        if p.data_urodzenia:
+            _el(sek_iii, "p7", _fmt_data(p.data_urodzenia))
+
+        # IV — Obywatelstwo i płeć
+        sek_iv = _el(zza, "IV")
+        obyw = _odmien_obywatelstwo(p.obywatelstwo)
+        _el(sek_iv, "p3", obyw)
+        plec = ""
+        if p.pesel and len(p.pesel) >= 10:
+            try:
+                plec = "K" if int(p.pesel[9]) % 2 == 0 else "M"
+            except ValueError:
+                pass
+        if plec:
+            _el(sek_iv, "p4", plec)
+
+        # V — Kod tytułu ubezpieczenia
+        sek_v = _el(zza, "V")
+        p1v = _el(sek_v, "p1")
+        _el(p1v, "p1", str(p.kod_tytulu).zfill(4))
+        _el(p1v, "p2", "0")
+        _el(p1v, "p3", "0")
+
+        # VI — Data zgłoszenia do ubezp. zdrowotnego + kod NFZ
+        sek_vi = _el(zza, "VI")
+        data_zgl = _fmt_data(p.data_zgłoszenia) or datetime.now().strftime("%Y-%m-%d")
+        _el(sek_vi, "p1", data_zgl)
+        kod_nfz = str(p.kod_nfz).zfill(2) if p.kod_nfz else "07"
+        _el(sek_vi, "p2", kod_nfz + "R")
+
+        # VII-IX — puste
+        _el(zza, "VII")
+        _el(zza, "VIII")
+        _el(zza, "IX")
+
+        # X — TERYT
+        sek_x = _el(zza, "X")
+        _el(sek_x, "p3")
+
+        # XI — Adres
+        sek_xi = _el(zza, "XI")
+        if p.kod_pocztowy:
+            _el(sek_xi, "p1", str(p.kod_pocztowy).replace("-", ""))
+        if p.miejscowosc:
+            _el(sek_xi, "p2", p.miejscowosc.upper())
+            _el(sek_xi, "p3", p.miejscowosc.upper())
+        if p.ulica:
+            _el(sek_xi, "p4", p.ulica.upper())
+        if p.nr_domu:
+            _el(sek_xi, "p5", str(p.nr_domu))
+        if p.nr_lokalu:
+            _el(sek_xi, "p6", str(p.nr_lokalu))
+
+        # XII-XIII — puste
+        _el(zza, "XII")
+        _el(zza, "XIII")
+
+        # XIV — Data wypełnienia
+        sek_xiv = _el(zza, "XIV")
+        _el(sek_xiv, "p1", datetime.now().strftime("%Y-%m-%d"))
+
+    return len(poprawni)
+
+
+def generuj_wszystkie_kedu(pracownicy, katalog):
+    katalog = Path(katalog)
+    katalog.mkdir(parents=True, exist_ok=True)
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    wyniki = {}
+
+    rca = [p for p in pracownicy if p.typ_deklaracji.upper() == "RCA" and not p.bledy]
+    zua = [p for p in pracownicy if p.typ_deklaracji.upper() == "ZUA" and not p.bledy]
+    zza = [p for p in pracownicy if p.typ_deklaracji.upper() == "ZZA" and not p.bledy]
+
+    if rca:
+        root = _utworz_root()
+        _buduj_naglowek(root)
+        _buduj_zusdra(root, rca, doc_id=1)
+        _buduj_zusrca(root, rca, doc_id=2)
+        sciezka = katalog / f"DRA_RCA_{ts}.xml"
+        _zapisz_kedu(root, sciezka)
+        wyniki["DRA+RCA"] = sciezka
+        logger.info(f"DRA+RCA: {len(rca)} pracowników")
+
+    if zua:
+        root = _utworz_root()
+        _buduj_naglowek(root)
+        count = _buduj_zuszua(root, zua, doc_id_start=1)
+        sciezka = katalog / f"ZUA_{ts}.xml"
+        _zapisz_kedu(root, sciezka)
+        wyniki["ZUA"] = sciezka
+        logger.info(f"ZUA: {count} zgłoszeń")
+
+    if zza:
+        root = _utworz_root()
+        _buduj_naglowek(root)
+        count = _buduj_zuszza(root, zza, doc_id_start=1)
+        sciezka = katalog / f"ZZA_{ts}.xml"
+        _zapisz_kedu(root, sciezka)
+        wyniki["ZZA"] = sciezka
+        logger.info(f"ZZA: {count} zgłoszeń")
 
     return wyniki
