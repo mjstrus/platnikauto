@@ -405,6 +405,9 @@ def _buduj_zuszua(root, pracownicy, doc_id_start=1):
         sek_iii = _el(zua, "III")
         if p.pesel:
             _el(sek_iii, "p1", str(p.pesel))
+        if p.nr_paszportu:
+            _el(sek_iii, "p3", "2")  # 2 = paszport
+            _el(sek_iii, "p4", str(p.nr_paszportu))
         _el(sek_iii, "p5", p.nazwisko.upper())
         _el(sek_iii, "p6", p.imie.upper())
         if p.data_urodzenia:
@@ -514,6 +517,9 @@ def _buduj_zuszza(root, pracownicy, doc_id_start=1):
         sek_iii = _el(zza, "III")
         if p.pesel:
             _el(sek_iii, "p1", str(p.pesel))
+        if p.nr_paszportu:
+            _el(sek_iii, "p3", "2")  # 2 = paszport
+            _el(sek_iii, "p4", str(p.nr_paszportu))
         _el(sek_iii, "p5", p.nazwisko.upper())
         _el(sek_iii, "p6", p.imie.upper())
         if p.data_urodzenia:
@@ -616,6 +622,9 @@ def _buduj_zwua(root, pracownicy, doc_id_start=1):
         sek_iii = _el(zwua, "III")
         if p.pesel:
             _el(sek_iii, "p1", str(p.pesel))
+        if p.nr_paszportu:
+            _el(sek_iii, "p3", "2")  # 2 = paszport
+            _el(sek_iii, "p4", str(p.nr_paszportu))
         _el(sek_iii, "p5", p.nazwisko.upper())
         _el(sek_iii, "p6", p.imie.upper())
         if p.data_urodzenia:
