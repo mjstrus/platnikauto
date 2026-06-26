@@ -142,18 +142,40 @@ with st.sidebar:
             for grupa, opis in KODY_TYTULU_REF.items():
                 st.caption(f"**{grupa}**: {opis}")
 
-        kod_zawodu_input = st.text_input("Kod zawodu (6 cyfr)", value="932990", max_chars=6, help="Kod wg klasyfikacji GUS")
-        with st.expander("📖 Popularne kody zawodów"):
-            st.caption("**932101** — Pakowacz ręczny")
-            st.caption("**932990** — Pracownik produkcji (prace proste)")
-            st.caption("**411003** — Pracownik biurowy")
-            st.caption("**242490** — Specjalista ds. rekrutacji/koordynator")
-            st.caption("**833101** — Kierowca samochodu ciężarowego")
-            st.caption("**941201** — Pomoc kuchenna")
-            st.caption("**751201** — Cukiernik")
-            st.caption("**512001** — Kucharz")
-            st.caption("**911207** — Sprzątaczka")
-            st.caption("Pełna lista: psz.praca.gov.pl")
+        KODY_ZAWODOW = [
+            "932101 — Pakowacz ręczny",
+            "932990 — Pracownik produkcji (prace proste)",
+            "932901 — Robotnik gospodarczy",
+            "411003 — Pracownik biurowy",
+            "242490 — Specjalista ds. rekrutacji / koordynator",
+            "833101 — Kierowca samochodu ciężarowego",
+            "833203 — Kierowca samochodu dostawczego",
+            "834201 — Operator wózka widłowego",
+            "941201 — Pomoc kuchenna",
+            "512001 — Kucharz",
+            "751201 — Cukiernik",
+            "753303 — Krawiec",
+            "721301 — Blacharz",
+            "721205 — Spawacz",
+            "711101 — Murarz",
+            "711301 — Cieśla",
+            "711401 — Zbrojarz",
+            "712601 — Hydraulik",
+            "741101 — Elektryk",
+            "816003 — Operator maszyn produkcyjnych",
+            "911207 — Sprzątaczka",
+            "912101 — Praczka",
+            "524902 — Sprzedawca",
+            "331301 — Księgowy",
+            "242217 — Specjalista ds. kadr",
+            "143990 — Kierownik (gdzie indziej niesklasyfikowany)",
+            "522301 — Kasjer",
+            "432103 — Magazynier",
+            "962902 — Pracownik ochrony",
+        ]
+        kod_zawodu_select = st.selectbox("Kod zawodu", KODY_ZAWODOW, help="Wybierz z listy lub wpisz poniżej własny")
+        kod_zawodu_custom = st.text_input("Lub wpisz własny kod (6 cyfr)", max_chars=6, placeholder="np. 932101")
+        kod_zawodu_input = kod_zawodu_custom.strip() if kod_zawodu_custom.strip() else kod_zawodu_select.split(" — ")[0].strip()
         kod_tytulu_val = kod_tytulu_input.strip().zfill(4)
 
         if typ_operacji == "ZUA":
