@@ -217,44 +217,78 @@ KOLUMNY_MAP = {
     "Poprzednia seria": "poprzednia_seria",
 }
 
-# Format 2: Format biurowy (plik od klienta)
-KOLUMNY_MAP_BIURO = {
-    "PESEL": "pesel",
-    "Nazwisko": "nazwisko",
-    "Imię": "imie",
-    "drugie imię": "drugie_imie",
-    "Imię i nazwisko": "_imie_nazwisko",   # specjalne: rozdzielimy
-    "Data urodzenia": "data_urodzenia",
-    "Rozpoczęcie pracy ZUS": "data_zgłoszenia",
-    "Zakończenie pracy ZUS": "_zakonczenie",
-    "Typ dokumentu": "_typ_dokumentu",      # paszport/dowód → typ_identyfikatora
-    "Nr dokumentu": "nr_paszportu",
-    "Obywatelstwo": "obywatelstwo",
-    "Płeć": "_plec",
-    "Rodzaj umowy": "_rodzaj_umowy",
-    "Oddział NFZ": "kod_nfz",
-    "Kod Pocztowy": "kod_pocztowy",
-    "Miejscowość": "miejscowosc",
-    "Ulica": "ulica",
-    "Numer domu": "nr_domu",
-    "Numer lokalu": "nr_lokalu",
-    "ZUS": "_zus",
-    "Stanowisko": "_stanowisko",
-    "Kod tytułu": "kod_tytulu",
-    "Kod zgłoszenia": "typ_deklaracji",
+# Format 2: Format biurowy — elastyczne mapowanie z wieloma wariantami nazw
+_BIURO_ALIASES = {
+    "pesel": ["pesel"],
+    "nazwisko": ["nazwisko"],
+    "imie": ["imię", "imie"],
+    "drugie_imie": ["drugie imię", "drugie imie"],
+    "_imie_nazwisko": ["imię i nazwisko", "imie i nazwisko", "name and surname"],
+    "data_urodzenia": ["data urodzenia", "birth"],
+    "data_zgłoszenia": ["rozpoczęcie pracy zus", "data zgłoszenia", "start of work"],
+    "_zakonczenie": ["zakończenie pracy zus", "date of end"],
+    "_typ_dokumentu": ["typ dokumentu", "dokument"],
+    "nr_paszportu": ["nr dokumentu", "nr paszportu", "paszport", "number passport"],
+    "obywatelstwo": ["obywatelstwo", "citizen ship", "citizenship"],
+    "_plec": ["płeć", "plec", "gender"],
+    "_rodzaj_umowy": ["rodzaj umowy", "contract"],
+    "kod_nfz": ["oddział nfz", "kod nfz", "nfz"],
+    "kod_pocztowy": ["kod pocztowy", "kod_pocztowy"],
+    "miejscowosc": ["miejscowość", "miejscowosc", "miasto"],
+    "ulica": ["ulica"],
+    "nr_domu": ["numer domu", "nr domu", "numer budynku/mieszkania", "numer budynku"],
+    "nr_lokalu": ["numer lokalu", "nr lokalu"],
+    "_zus": ["zus"],
+    "_stanowisko": ["stanowisko", "work"],
+    "kod_tytulu": ["kod tytułu", "kod tytulu"],
+    "typ_deklaracji": ["kod zgłoszenia", "typ deklaracji"],
+    "typ_identyfikatora": ["typ identyfikatora"],
+    "seria_paszportu": ["seria paszportu"],
+    "kraj_paszportu": ["kraj paszportu"],
+    "_gmina": ["gmina"],
+    "poprzedni_typ_id": ["poprzedni typ id"],
+    "poprzedni_nr_dokumentu": ["poprzedni nr dokumentu"],
+    "poprzednia_seria": ["poprzednia seria"],
 }
 
 
-def _wykryj_format(kolumny_excel: list[str]) -> dict:
-    """Auto-detekcja formatu Excel na podstawie nagłówków"""
-    kolumny_norm = [str(k).strip() for k in kolumny_excel]
+def _buduj_mape_kolumn(kolumny_excel: list[str]) -> dict:
+    """Buduje mapę kolumn Excel → atrybut Pracownik, case-insensitive z aliasami"""
+    mapa = {}
+    kolumny_lower = {str(k).strip().lower(): str(k).strip() for k in kolumny_excel}
     
-    if any(k in kolumny_norm for k in ["Imię i nazwisko", "Typ dokumentu", "Rozpoczęcie pracy ZUS", "Numer domu"]):
+    for attr, aliasy in _BIURO_ALIASES.items():
+        for alias in aliasy:
+            if alias.lower() in kolumny_lower:
+                oryginalna_nazwa = kolumny_lower[alias.lower()]
+                mapa[oryginalna_nazwa] = attr
+                break
+    
+    return mapa
+
+
+def _wykryj_format(kolumny_excel: list[str]) -> dict:
+    """Auto-detekcja formatu Excel — zawsze buduje elastyczną mapę"""
+    kolumny_lower = [str(k).strip().lower() for k in kolumny_excel]
+    
+    # Sprawdź czy to format biurowy (ma typowe kolumny biurowe)
+    biuro_markers = ["imię i nazwisko", "typ dokumentu", "rozpoczęcie pracy zus", 
+                     "numer domu", "dokument", "paszport", "miasto",
+                     "numer budynku/mieszkania", "name and surname"]
+    
+    if any(m in kolumny_lower for m in biuro_markers):
         logger.info("Wykryto format: biurowy (plik od klienta)")
-        return KOLUMNY_MAP_BIURO
-    else:
+        return _buduj_mape_kolumn(kolumny_excel)
+    
+    # Sprawdź czy pasuje do szablonu rozszerzonego
+    szablon_markers = ["podstawa emerytalna", "składka emer. pracownik"]
+    if any(m in kolumny_lower for m in szablon_markers):
         logger.info("Wykryto format: szablon rozszerzony")
         return KOLUMNY_MAP
+    
+    # Fallback: spróbuj elastyczne mapowanie
+    logger.info("Wykryto format: nieznany — próbuję elastyczne mapowanie")
+    return _buduj_mape_kolumn(kolumny_excel)
 
 
 def wczytaj_excel(sciezka: str | Path, arkusz: str = None) -> list[Pracownik]:
@@ -267,18 +301,14 @@ def wczytaj_excel(sciezka: str | Path, arkusz: str = None) -> list[Pracownik]:
     if not sciezka.exists():
         raise FileNotFoundError(f"Nie znaleziono pliku: {sciezka}")
 
-    df = pd.read_excel(sciezka, sheet_name=arkusz or 0, dtype={
-        "PESEL": str, "Kod pocztowy": str, "Kod Pocztowy": str,
-        "Kod tytułu": str, "Kod NFZ": str, "Oddział NFZ": str,
-        "Nr dokumentu": str, "Nr paszportu": str,
-    })
+    df = pd.read_excel(sciezka, sheet_name=arkusz or 0, dtype=str)
     logger.info(f"Wczytano {len(df)} wierszy z {sciezka.name}")
 
     df.columns = df.columns.str.strip()
     
     # Auto-detekcja formatu
     mapa = _wykryj_format(list(df.columns))
-    is_biuro = (mapa is KOLUMNY_MAP_BIURO)
+    is_biuro = any(attr.startswith("_") for attr in mapa.values())
 
     pracownicy = []
     for idx, row in df.iterrows():
@@ -288,16 +318,33 @@ def wczytaj_excel(sciezka: str | Path, arkusz: str = None) -> list[Pracownik]:
         for excel_col, attr in mapa.items():
             if excel_col in df.columns:
                 val = row[excel_col]
-                if pd.isna(val):
+                if pd.isna(val) or str(val).strip() == "" or str(val).strip().lower() == "nan":
                     continue
-                if isinstance(val, float) and attr in ("pesel", "kod_pocztowy", "kod_tytulu", "kod_nfz", "nr_domu", "nr_lokalu", "nr_paszportu"):
-                    val = str(int(val))
-                    if attr == "kod_tytulu":
-                        val = val.zfill(4)
-                    elif attr == "kod_nfz":
-                        val = val.zfill(2)
-                else:
-                    val = val if isinstance(val, (int, float)) else str(val).strip()
+                
+                val = str(val).strip()
+                
+                # Usuń ".0" z końca (Excel zapisuje liczby jako float w stringu)
+                if val.endswith(".0") and attr in ("pesel", "kod_pocztowy", "kod_tytulu", "kod_nfz", "nr_domu", "nr_lokalu", "nr_paszportu"):
+                    val = val[:-2]
+                
+                # Dopełnienie zerami
+                if attr == "pesel" and val.isdigit() and len(val) == 10:
+                    val = "0" + val
+                elif attr == "kod_tytulu" and val.isdigit():
+                    val = val.zfill(4)
+                elif attr == "kod_nfz" and val.isdigit():
+                    val = val.zfill(2)
+                
+                # Numer budynku/mieszkania — rozdziel na nr_domu i nr_lokalu
+                if attr == "nr_domu" and "/" in val:
+                    parts = val.split("/", 1)
+                    kwargs["nr_domu"] = parts[0].strip()
+                    kwargs["nr_lokalu"] = parts[1].strip()
+                    continue
+                
+                # Usuń ".0" z dat i numerów
+                if val.endswith(".0") and val[:-2].isdigit():
+                    val = val[:-2]
                 
                 if attr.startswith("_"):
                     extra[attr] = val

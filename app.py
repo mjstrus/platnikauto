@@ -21,6 +21,8 @@ import config
 from excel_reader import wczytaj_excel, raport_walidacji, kod_pocztowy_do_nfz, waliduj_pesel
 from kedu_generator import generuj_wszystkie_kedu
 from pdf_confirmations import generuj_potwierdzenia
+from document_scanner import skanuj_dokument, DaneZDokumentu
+from sheets_connector import SheetsConnector, GSPREAD_AVAILABLE
 
 
 
@@ -224,6 +226,17 @@ with st.sidebar:
     nazwa_biura = st.text_input("Nazwa biura", value="")
     adres_biura = st.text_input("Adres biura", placeholder="")
 
+    st.divider()
+    st.header("🔑 API Anthropic")
+    api_key = st.text_input("Klucz API", type="password", help="Do skanowania dokumentów (Claude Vision)")
+    st.divider()
+    st.header("📊 Google Sheets")
+    sheets_id = st.text_input("ID arkusza", value="1gRvYs6CaTpQpz717YI1etNqqJItEaYnBEqmNMPJZBEU", help="ID z URL arkusza Google Sheets")
+    sheets_gid = st.number_input("GID arkusza", value=18649467, help="GID z URL (po #gid=)")
+    sheets_creds = st.text_area("Klucz JSON Service Account", height=100, help="Wklej cały JSON klucza service account z Google Cloud", placeholder='{"type":"service_account","project_id":"...","private_key":"..."}')
+
+
+
 
 def _ustaw_config():
     config.NIP_PLATNIKA = nip.strip()
@@ -243,6 +256,66 @@ def _ustaw_config():
 # ============================================================
 #  UPLOAD + EDYCJA
 # ============================================================
+
+# ============================================================
+#  SKANER DOKUMENTÓW
+# ============================================================
+with st.expander("📷 Skaner dokumentów — odczyt z paszportu / powiadomienia PESEL", expanded=False):
+    st.caption("Wgraj zdjęcie paszportu lub powiadomienia o nadaniu PESEL — system odczyta dane automatycznie")
+    
+    col_scan1, col_scan2 = st.columns([2, 1])
+    with col_scan1:
+        scan_file = st.file_uploader("Wgraj dokument", type=["jpg", "jpeg", "png", "pdf", "webp"], key="scanner")
+    with col_scan2:
+        scan_typ = st.radio("Typ dokumentu", ["Auto", "Paszport", "PESEL"], horizontal=True)
+    
+    if scan_file and st.button("🔍 Skanuj dokument", type="primary"):
+        if not api_key:
+            st.error("Wpisz klucz API Anthropic w panelu po lewej (sekcja 🔑)")
+        else:
+            with st.spinner("Analizuję dokument..."):
+                try:
+                    typ_map = {"Auto": "auto", "Paszport": "paszport", "PESEL": "pesel"}
+                    wynik = skanuj_dokument(
+                        image_bytes=scan_file.read(),
+                        typ=typ_map[scan_typ],
+                        api_key=api_key,
+                    )
+                    
+                    if wynik.imie or wynik.nazwisko:
+                        st.success(f"✅ Odczytano: **{wynik.imie} {wynik.nazwisko}** ({wynik.typ_dokumentu}, pewność: {wynik.pewnosc})")
+                        
+                        col_r1, col_r2 = st.columns(2)
+                        with col_r1:
+                            st.text_input("Imię", value=wynik.imie, key="scan_imie", disabled=True)
+                            st.text_input("Nazwisko", value=wynik.nazwisko, key="scan_nazwisko", disabled=True)
+                            st.text_input("Drugie imię", value=wynik.drugie_imie, key="scan_drugie", disabled=True)
+                            st.text_input("PESEL", value=wynik.pesel, key="scan_pesel", disabled=True)
+                        with col_r2:
+                            st.text_input("Nr dokumentu", value=wynik.nr_dokumentu, key="scan_nr", disabled=True)
+                            st.text_input("Obywatelstwo", value=wynik.obywatelstwo, key="scan_obyw", disabled=True)
+                            st.text_input("Data urodzenia", value=wynik.data_urodzenia, key="scan_data", disabled=True)
+                            st.text_input("Płeć", value=wynik.plec, key="scan_plec", disabled=True)
+                        
+                        if wynik.uwagi:
+                            st.info(f"📝 Uwagi: {wynik.uwagi}")
+                        if wynik.mrz:
+                            with st.expander("MRZ"):
+                                st.code(wynik.mrz)
+                        
+                        # Kopiowanie do schowka
+                        dane_csv = f"{wynik.nazwisko}\t{wynik.imie}\t{wynik.drugie_imie}\t{wynik.pesel}\t{wynik.nr_dokumentu}\t{wynik.obywatelstwo}\t{wynik.data_urodzenia}\t{wynik.plec}"
+                        st.code(dane_csv, language=None)
+                        st.caption("↑ Skopiuj i wklej do Excela (Tab-separated)")
+                    else:
+                        st.error("Nie udało się odczytać danych z dokumentu")
+                        if wynik.uwagi:
+                            st.info(wynik.uwagi)
+                except Exception as e:
+                    st.error(f"Błąd skanowania: {e}")
+
+st.divider()
+
 uploaded = st.file_uploader(
     "📁 Wrzuć plik Excel z danymi pracowników",
     type=["xlsx", "xls", "csv"],
