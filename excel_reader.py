@@ -32,6 +32,7 @@ class Pracownik:
     # ZUS
     kod_tytulu: str = "0110"  # domyślnie: pracownik
     kod_nfz: str = ""         # auto-wykrywany z kodu pocztowego
+    kod_zawodu: str = ""      # 6-cyfrowy kod zawodu wg GUS
     
     # Wynagrodzenie / składki (RCA)
     podstawa_emerytalna: float = 0.0
@@ -242,6 +243,7 @@ _BIURO_ALIASES = {
     "_stanowisko": ["stanowisko", "work"],
     "kod_tytulu": ["kod tytułu", "kod tytulu"],
     "typ_deklaracji": ["kod zgłoszenia", "typ deklaracji"],
+    "kod_zawodu": ["kod zawodu", "kod_zawodu"],
     "typ_identyfikatora": ["typ identyfikatora"],
     "seria_paszportu": ["seria paszportu"],
     "kraj_paszportu": ["kraj paszportu"],

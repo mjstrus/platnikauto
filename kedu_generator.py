@@ -488,8 +488,10 @@ def _buduj_zuszua(root, pracownicy, doc_id_start=1):
         _el(zua, "VIII")
         _el(zua, "IX")
 
-        # X — TERYT (opcjonalne)
+        # X — Kod zawodu
         sek_x = _el(zua, "X")
+        if p.kod_zawodu:
+            _el(sek_x, "p1", str(p.kod_zawodu).strip())
         _el(sek_x, "p3")
 
         # XI — Adres
@@ -573,12 +575,14 @@ def _buduj_zuszza(root, pracownicy, doc_id_start=1):
         if plec:
             _el(sek_iv, "p4", plec)
 
-        # V — Kod tytułu
+        # V — Kod tytułu + kod zawodu
         sek_v = _el(zza, "V")
         p1v = _el(sek_v, "p1")
         _el(p1v, "p1", str(p.kod_tytulu).zfill(4))
         _el(p1v, "p2", "0")
         _el(p1v, "p3", "0")
+        if p.kod_zawodu:
+            _el(sek_v, "p2", str(p.kod_zawodu).strip())
 
         # VI — Ubezp. zdrowotne
         sek_vi = _el(zza, "VI")

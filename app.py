@@ -141,6 +141,19 @@ with st.sidebar:
         with st.expander("📖 Podpowiedź — popularne kody"):
             for grupa, opis in KODY_TYTULU_REF.items():
                 st.caption(f"**{grupa}**: {opis}")
+
+        kod_zawodu_input = st.text_input("Kod zawodu (6 cyfr)", value="932990", max_chars=6, help="Kod wg klasyfikacji GUS")
+        with st.expander("📖 Popularne kody zawodów"):
+            st.caption("**932101** — Pakowacz ręczny")
+            st.caption("**932990** — Pracownik produkcji (prace proste)")
+            st.caption("**411003** — Pracownik biurowy")
+            st.caption("**242490** — Specjalista ds. rekrutacji/koordynator")
+            st.caption("**833101** — Kierowca samochodu ciężarowego")
+            st.caption("**941201** — Pomoc kuchenna")
+            st.caption("**751201** — Cukiernik")
+            st.caption("**512001** — Kucharz")
+            st.caption("**911207** — Sprzątaczka")
+            st.caption("Pełna lista: psz.praca.gov.pl")
         kod_tytulu_val = kod_tytulu_input.strip().zfill(4)
 
         if typ_operacji == "ZUA":
@@ -350,6 +363,7 @@ if uploaded:
                 "Nr domu": p.nr_domu or "",
                 "Nr lokalu": p.nr_lokalu or "",
                 "Kod tytułu": p.kod_tytulu or "0110",
+                "Kod zawodu": p.kod_zawodu or "",
                 "NFZ (auto)": p.kod_nfz or kod_pocztowy_do_nfz(p.kod_pocztowy) or "",
                 "Data zgłoszenia": str(p.data_zgłoszenia)[:10] if p.data_zgłoszenia else "",
             })
@@ -373,9 +387,11 @@ if uploaded:
         # Nadpisz daty i kody z sidebara (jeśli ustawione)
         if typ_operacji in ("ZUA", "ZZA"):
             df["Kod tytułu"] = kod_tytulu_val
+            df["Kod zawodu"] = kod_zawodu_input.strip()
             df["Data zgłoszenia"] = str(data_zgloszenia)
         elif typ_operacji == "ZWUA":
             df["Kod tytułu"] = kod_tytulu_val
+            df["Kod zawodu"] = kod_zawodu_input.strip() if "kod_zawodu_input" in dir() else ""
             if "Data wyrejestrowania" not in df.columns:
                 df["Data wyrejestrowania"] = str(data_wyrejestrowania)
 
@@ -415,6 +431,7 @@ if uploaded:
                     nr_domu=str(r.get("Nr domu", "")).strip(),
                     nr_lokalu=str(r.get("Nr lokalu", "")).strip(),
                     kod_tytulu=str(r.get("Kod tytułu", "0110")).strip(),
+                    kod_zawodu=str(r.get("Kod zawodu", "")).strip(),
                     kod_nfz=str(r.get("NFZ (auto)", "")).strip(),
                     nr_paszportu=str(r.get("Nr paszportu", "")).strip(),
                     obywatelstwo=str(r.get("Obywatelstwo", "PL")).strip(),
