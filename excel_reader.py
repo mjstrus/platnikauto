@@ -326,13 +326,13 @@ def wczytaj_excel(sciezka: str | Path, arkusz: str = None) -> list[Pracownik]:
                     kwargs["imie"] = parts[0]
                     kwargs["nazwisko"] = " ".join(parts[1:])
                 elif len(parts) == 1:
-                    # Jedno imię (np. indonezyjskie) — użyj jako nazwisko
-                    kwargs["nazwisko"] = parts[0]
+                    # Jedno imię (np. indonezyjskie/filipińskie) — "-" jako nazwisko
                     kwargs.setdefault("imie", parts[0])
+                    kwargs["nazwisko"] = "-"
             
-            # Jeśli imię jest wypełnione ale nazwisko nie — jednoimienni
+            # Jeśli imię jest wypełnione ale nazwisko nie — wstaw "-"
             if kwargs.get("imie") and not kwargs.get("nazwisko"):
-                kwargs["nazwisko"] = kwargs["imie"]
+                kwargs["nazwisko"] = "-"
             
             # Data zgłoszenia z "Rozpoczęcie pracy ZUS"
             if kwargs.get("data_zgłoszenia"):

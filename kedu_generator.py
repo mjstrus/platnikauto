@@ -30,6 +30,42 @@ def _el(parent, tag, text=None):
     return e
 
 
+def _normalize_name(text):
+    """Zamienia znaki diakrytyczne z obcych języków (ñ, á, é, ü...) 
+    na polskie/łacińskie odpowiedniki. Zachowuje polskie znaki (ąćęłńóśźż)."""
+    if not text:
+        return text
+    import unicodedata
+    POLISH = set("ąćęłńóśźżĄĆĘŁŃÓŚŹŻ")
+    SPECIAL = {
+        'ñ': 'n', 'Ñ': 'N',
+        'ß': 'ss',
+        'ø': 'o', 'Ø': 'O',
+        'æ': 'ae', 'Æ': 'AE',
+        'đ': 'd', 'Đ': 'D',
+        'ð': 'd', 'Ð': 'D',
+        'þ': 'th', 'Þ': 'TH',
+    }
+    result = []
+    for c in text:
+        if c in POLISH:
+            result.append(c)
+        elif c in SPECIAL:
+            result.append(SPECIAL[c])
+        elif ord(c) < 128:
+            result.append(c)
+        else:
+            decomp = unicodedata.normalize('NFD', c)
+            base = ''.join(x for x in decomp if unicodedata.category(x) != 'Mn')
+            result.append(base if base else c)
+    return ''.join(result)
+
+
+def _name(text):
+    """Normalizuje i zamienia na UPPER CASE do KEDU"""
+    return _normalize_name(str(text).strip()).upper() if text else ""
+
+
 def _buduj_naglowek(root):
     nag = _el(root, "naglowek.KEDU")
     prog = _el(nag, "program")
@@ -90,8 +126,8 @@ def _buduj_zusrca(root, pracownicy, doc_id=2):
 
         # A — identyfikacja ubezpieczonego
         a = _el(blok, "A")
-        _el(a, "p1", p.nazwisko.upper())
-        _el(a, "p2", p.imie.upper())
+        _el(a, "p1", _name(p.nazwisko))
+        _el(a, "p2", _name(p.imie))
         _el(a, "p3", "P")
         _el(a, "p4", str(p.pesel))
 
@@ -408,8 +444,8 @@ def _buduj_zuszua(root, pracownicy, doc_id_start=1):
         if p.nr_paszportu:
             _el(sek_iii, "p3", "2")  # 2 = paszport
             _el(sek_iii, "p4", str(p.nr_paszportu))
-        _el(sek_iii, "p5", p.nazwisko.upper())
-        _el(sek_iii, "p6", p.imie.upper())
+        _el(sek_iii, "p5", _name(p.nazwisko))
+        _el(sek_iii, "p6", _name(p.imie))
         if p.data_urodzenia:
             _el(sek_iii, "p7", _fmt_data(p.data_urodzenia))
 
@@ -461,10 +497,10 @@ def _buduj_zuszua(root, pracownicy, doc_id_start=1):
         if p.kod_pocztowy:
             _el(sek_xi, "p1", str(p.kod_pocztowy).replace("-", ""))
         if p.miejscowosc:
-            _el(sek_xi, "p2", p.miejscowosc.upper())
-            _el(sek_xi, "p3", p.miejscowosc.upper())
+            _el(sek_xi, "p2", _name(p.miejscowosc))
+            _el(sek_xi, "p3", _name(p.miejscowosc))
         if p.ulica:
-            _el(sek_xi, "p4", p.ulica.upper())
+            _el(sek_xi, "p4", _name(p.ulica))
         if p.nr_domu:
             _el(sek_xi, "p5", str(p.nr_domu))
         if p.nr_lokalu:
@@ -520,8 +556,8 @@ def _buduj_zuszza(root, pracownicy, doc_id_start=1):
         if p.nr_paszportu:
             _el(sek_iii, "p3", "2")  # 2 = paszport
             _el(sek_iii, "p4", str(p.nr_paszportu))
-        _el(sek_iii, "p5", p.nazwisko.upper())
-        _el(sek_iii, "p6", p.imie.upper())
+        _el(sek_iii, "p5", _name(p.nazwisko))
+        _el(sek_iii, "p6", _name(p.imie))
         if p.data_urodzenia:
             _el(sek_iii, "p7", _fmt_data(p.data_urodzenia))
 
@@ -559,10 +595,10 @@ def _buduj_zuszza(root, pracownicy, doc_id_start=1):
         if p.kod_pocztowy:
             _el(sek_viii, "p1", str(p.kod_pocztowy).replace("-", ""))
         if p.miejscowosc:
-            _el(sek_viii, "p2", p.miejscowosc.upper())
-            _el(sek_viii, "p3", p.miejscowosc.upper())
+            _el(sek_viii, "p2", _name(p.miejscowosc))
+            _el(sek_viii, "p3", _name(p.miejscowosc))
         if p.ulica:
-            _el(sek_viii, "p4", p.ulica.upper())
+            _el(sek_viii, "p4", _name(p.ulica))
         if p.nr_domu:
             _el(sek_viii, "p5", str(p.nr_domu))
         if p.nr_lokalu:
@@ -573,9 +609,9 @@ def _buduj_zuszza(root, pracownicy, doc_id_start=1):
         if p.kod_pocztowy:
             _el(sek_ix, "p1", str(p.kod_pocztowy).replace("-", ""))
         if p.miejscowosc:
-            _el(sek_ix, "p2", p.miejscowosc.upper())
+            _el(sek_ix, "p2", _name(p.miejscowosc))
         if p.ulica:
-            _el(sek_ix, "p4", p.ulica.upper())
+            _el(sek_ix, "p4", _name(p.ulica))
         if p.nr_domu:
             _el(sek_ix, "p5", str(p.nr_domu))
         if p.nr_lokalu:
@@ -625,8 +661,8 @@ def _buduj_zwua(root, pracownicy, doc_id_start=1):
         if p.nr_paszportu:
             _el(sek_iii, "p3", "2")  # 2 = paszport
             _el(sek_iii, "p4", str(p.nr_paszportu))
-        _el(sek_iii, "p5", p.nazwisko.upper())
-        _el(sek_iii, "p6", p.imie.upper())
+        _el(sek_iii, "p5", _name(p.nazwisko))
+        _el(sek_iii, "p6", _name(p.imie))
         if p.data_urodzenia:
             _el(sek_iii, "p7", _fmt_data(p.data_urodzenia))
 
@@ -680,8 +716,8 @@ def _buduj_ziua(root, pracownicy, doc_id_start=1):
         elif p.poprzedni_nr_dokumentu:
             _el(sek_ii, "p4", str(p.poprzedni_typ_id or "1"))
             _el(sek_ii, "p5", str(p.poprzedni_nr_dokumentu))
-        _el(sek_ii, "p6", p.nazwisko.upper())
-        _el(sek_ii, "p7", p.imie.upper())
+        _el(sek_ii, "p6", _name(p.nazwisko))
+        _el(sek_ii, "p7", _name(p.imie))
         if p.data_urodzenia:
             _el(sek_ii, "p8", _fmt_data(p.data_urodzenia))
 
@@ -689,8 +725,8 @@ def _buduj_ziua(root, pracownicy, doc_id_start=1):
         sek_iii = _el(ziua, "III")
         if p.pesel:
             _el(sek_iii, "p1", str(p.pesel))
-        _el(sek_iii, "p6", p.nazwisko.upper())
-        _el(sek_iii, "p7", p.imie.upper())
+        _el(sek_iii, "p6", _name(p.nazwisko))
+        _el(sek_iii, "p7", _name(p.imie))
         if p.data_urodzenia:
             _el(sek_iii, "p8", _fmt_data(p.data_urodzenia))
 
@@ -784,8 +820,8 @@ def generuj_wszystkie_kedu(pracownicy, katalog):
         sek_iii = _el(zza, "III")
         if p.pesel:
             _el(sek_iii, "p1", str(p.pesel))
-        _el(sek_iii, "p5", p.nazwisko.upper())
-        _el(sek_iii, "p6", p.imie.upper())
+        _el(sek_iii, "p5", _name(p.nazwisko))
+        _el(sek_iii, "p6", _name(p.imie))
         if p.data_urodzenia:
             _el(sek_iii, "p7", _fmt_data(p.data_urodzenia))
 
@@ -830,10 +866,10 @@ def generuj_wszystkie_kedu(pracownicy, katalog):
         if p.kod_pocztowy:
             _el(sek_xi, "p1", str(p.kod_pocztowy).replace("-", ""))
         if p.miejscowosc:
-            _el(sek_xi, "p2", p.miejscowosc.upper())
-            _el(sek_xi, "p3", p.miejscowosc.upper())
+            _el(sek_xi, "p2", _name(p.miejscowosc))
+            _el(sek_xi, "p3", _name(p.miejscowosc))
         if p.ulica:
-            _el(sek_xi, "p4", p.ulica.upper())
+            _el(sek_xi, "p4", _name(p.ulica))
         if p.nr_domu:
             _el(sek_xi, "p5", str(p.nr_domu))
         if p.nr_lokalu:
