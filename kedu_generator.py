@@ -66,6 +66,37 @@ def _name(text):
     return _normalize_name(str(text).strip()).upper() if text else ""
 
 
+def _buduj_ubezpieczony(parent, p, tag="III"):
+    """
+    Buduje sekcję III (dane ubezpieczonego) z wyborem identyfikatora.
+    typ_identyfikatora: "P" = PESEL, "2" = Paszport
+    """
+    sek = _el(parent, tag)
+    
+    if p.typ_identyfikatora == "2" and p.nr_paszportu:
+        # Identyfikacja po PASZPORCIE (bez PESEL)
+        _el(sek, "p3", "2")  # typ: paszport
+        _el(sek, "p4", str(p.nr_paszportu))
+    elif p.pesel:
+        # Identyfikacja po PESEL
+        _el(sek, "p1", str(p.pesel))
+        # Dodatkowo paszport jeśli jest (ale PESEL jest główny)
+        if p.nr_paszportu:
+            _el(sek, "p3", "2")
+            _el(sek, "p4", str(p.nr_paszportu))
+    elif p.nr_paszportu:
+        # Brak PESEL — użyj paszportu
+        _el(sek, "p3", "2")
+        _el(sek, "p4", str(p.nr_paszportu))
+    
+    _el(sek, "p5", _name(p.nazwisko))
+    _el(sek, "p6", _name(p.imie))
+    if p.data_urodzenia:
+        _el(sek, "p7", _fmt_data(p.data_urodzenia))
+    
+    return sek
+
+
 def _buduj_naglowek(root):
     nag = _el(root, "naglowek.KEDU")
     prog = _el(nag, "program")
@@ -438,16 +469,7 @@ def _buduj_zuszua(root, pracownicy, doc_id_start=1):
         _buduj_platnik(zua)
 
         # III — Dane ubezpieczonego
-        sek_iii = _el(zua, "III")
-        if p.pesel:
-            _el(sek_iii, "p1", str(p.pesel))
-        if p.nr_paszportu:
-            _el(sek_iii, "p3", "2")  # 2 = paszport
-            _el(sek_iii, "p4", str(p.nr_paszportu))
-        _el(sek_iii, "p5", _name(p.nazwisko))
-        _el(sek_iii, "p6", _name(p.imie))
-        if p.data_urodzenia:
-            _el(sek_iii, "p7", _fmt_data(p.data_urodzenia))
+        _buduj_ubezpieczony(zua, p)
 
         # IV — Obywatelstwo i płeć
         sek_iv = _el(zua, "IV")
@@ -552,16 +574,7 @@ def _buduj_zuszza(root, pracownicy, doc_id_start=1):
         _buduj_platnik(zza)
 
         # III — Dane ubezpieczonego
-        sek_iii = _el(zza, "III")
-        if p.pesel:
-            _el(sek_iii, "p1", str(p.pesel))
-        if p.nr_paszportu:
-            _el(sek_iii, "p3", "2")  # 2 = paszport
-            _el(sek_iii, "p4", str(p.nr_paszportu))
-        _el(sek_iii, "p5", _name(p.nazwisko))
-        _el(sek_iii, "p6", _name(p.imie))
-        if p.data_urodzenia:
-            _el(sek_iii, "p7", _fmt_data(p.data_urodzenia))
+        _buduj_ubezpieczony(zza, p)
 
         # IV — Obywatelstwo i płeć
         sek_iv = _el(zza, "IV")
@@ -659,16 +672,7 @@ def _buduj_zwua(root, pracownicy, doc_id_start=1):
         _buduj_platnik(zwua)
 
         # III — Dane ubezpieczonego
-        sek_iii = _el(zwua, "III")
-        if p.pesel:
-            _el(sek_iii, "p1", str(p.pesel))
-        if p.nr_paszportu:
-            _el(sek_iii, "p3", "2")  # 2 = paszport
-            _el(sek_iii, "p4", str(p.nr_paszportu))
-        _el(sek_iii, "p5", _name(p.nazwisko))
-        _el(sek_iii, "p6", _name(p.imie))
-        if p.data_urodzenia:
-            _el(sek_iii, "p7", _fmt_data(p.data_urodzenia))
+        _buduj_ubezpieczony(zwua, p)
 
         # IV — Wyrejestrowanie z ubezpieczeń społecznych
         sek_iv = _el(zwua, "IV")
@@ -821,13 +825,7 @@ def generuj_wszystkie_kedu(pracownicy, katalog):
         _buduj_platnik(zza)
 
         # III — Dane ubezpieczonego
-        sek_iii = _el(zza, "III")
-        if p.pesel:
-            _el(sek_iii, "p1", str(p.pesel))
-        _el(sek_iii, "p5", _name(p.nazwisko))
-        _el(sek_iii, "p6", _name(p.imie))
-        if p.data_urodzenia:
-            _el(sek_iii, "p7", _fmt_data(p.data_urodzenia))
+        _buduj_ubezpieczony(zza, p)
 
         # IV — Obywatelstwo i płeć
         sek_iv = _el(zza, "IV")
