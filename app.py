@@ -86,7 +86,9 @@ st.set_page_config(page_title="Płatnik Auto", page_icon="📋", layout="wide")
 st.markdown("""
 <style>
     .block-container { padding-top: 1.5rem; }
-    div[data-testid="stMetric"] { background: #0f172a; padding: 10px 14px; border-radius: 8px; border-left: 3px solid #3b82f6; }
+    div[data-testid="stMetric"] { background: #1e293b; padding: 10px 14px; border-radius: 8px; border-left: 3px solid #3b82f6; }
+    div[data-testid="stMetric"] label { color: #e2e8f0 !important; font-weight: 600 !important; }
+    div[data-testid="stMetric"] div[data-testid="stMetricValue"] { color: #ffffff !important; font-size: 2rem !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -373,11 +375,11 @@ if uploaded:
         for p in pracownicy:
             rows.append({
                 "✓": True,  # checkbox — czy uwzględnić
+                "ID →": "PESEL" if (p.typ_identyfikatora != "2") else "Paszport",
                 "Nazwisko": p.nazwisko,
                 "Imię": p.imie,
                 "PESEL": p.pesel or "",
                 "Nr paszportu": p.nr_paszportu or "",
-                "Identyfikacja": "PESEL" if p.pesel else "Paszport",
                 "Data urodzenia": str(p.data_urodzenia)[:10] if p.data_urodzenia else "",
                 "Obywatelstwo": p.obywatelstwo or "PL",
                 "Kod pocztowy": p.kod_pocztowy or "",
@@ -427,7 +429,7 @@ if uploaded:
                 "PESEL": st.column_config.TextColumn("PESEL", width="medium"),
                 "Nr paszportu": st.column_config.TextColumn("Nr paszportu", width="medium"),
                 "Kod tytułu": st.column_config.TextColumn("Kod tytułu", width="small"),
-                "Identyfikacja": st.column_config.SelectboxColumn("ID", options=["PESEL", "Paszport"], default="PESEL", width="small"),
+                "ID →": st.column_config.SelectboxColumn("ID →", options=["PESEL", "Paszport"], default="PESEL", width="small"),
                 "NFZ (auto)": st.column_config.SelectboxColumn("NFZ",
                     options=[f"{i:02d}" for i in range(1, 17)], width="small"),
                 "Obywatelstwo": st.column_config.TextColumn("Obywatelstwo", width="small"),
@@ -456,7 +458,7 @@ if uploaded:
                     nr_lokalu=str(r.get("Nr lokalu", "")).strip(),
                     kod_tytulu=str(r.get("Kod tytułu", "0110")).strip(),
                     kod_zawodu=str(r.get("Kod zawodu", "")).strip(),
-                    typ_identyfikatora="P" if r.get("Identyfikacja", "PESEL") == "PESEL" else "2",
+                    typ_identyfikatora="P" if r.get("ID →", "PESEL") == "PESEL" else "2",
                     kod_nfz=str(r.get("NFZ (auto)", "")).strip(),
                     nr_paszportu=str(r.get("Nr paszportu", "")).strip(),
                     obywatelstwo=str(r.get("Obywatelstwo", "PL")).strip(),
